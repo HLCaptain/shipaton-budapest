@@ -2,6 +2,8 @@
 
 A small static site for the Budapest Shipaton 2026 event series. Astro renders the page; the browser only runs the date-aware event rail.
 
+Production: [shipaton-budapest.pages.dev](https://shipaton-budapest.pages.dev)
+
 ## Local development
 
 ```sh
