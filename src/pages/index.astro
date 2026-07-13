@@ -1,0 +1,157 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { events } from "../data/events";
+
+const pageTitle = "Shipaton Budapest 2026";
+const description =
+  "A community-led Budapest event series for builders taking an app from first commit to shipped during Shipaton 2026.";
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Budapest"
+});
+---
+
+<BaseLayout title={pageTitle} description={description}>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Shipaton Budapest home">
+      <img
+        src="/brand/shipaton-wordmark.svg"
+        width="535"
+        height="128"
+        alt="Shipaton 2026"
+        decoding="async"
+      />
+    </a>
+    <div class="site-header__meta">
+      <span>Budapest, HU</span>
+      <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton ↗</a>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__copy">
+        <p class="eyebrow"><span aria-hidden="true"></span> August—September 2026</p>
+        <h1 id="hero-title">A local runway for apps that actually ship.</h1>
+        <p class="hero__lede">
+          Four practical Budapest meetups for finding momentum, getting unstuck, and crossing the finish line together.
+        </p>
+        <div class="hero__actions">
+          <a class="button button--primary" href="#events">Explore the dates <span aria-hidden="true">↓</span></a>
+          <a
+            class="button button--quiet"
+            href="https://revenuecat-shipaton-2026.devpost.com/"
+            rel="noreferrer"
+          >Join Shipaton <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <figure class="hero__art">
+        <img
+          src="/brand/rocket-launch-wide.svg"
+          width="1000"
+          height="498"
+          alt="Shippy the cat launching in an orange rocket"
+          decoding="async"
+          fetchpriority="high"
+        />
+        <figcaption>
+          <span>Launch point</span>
+          <strong>47.4979° N · 19.0402° E</strong>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="events" id="events" aria-labelledby="events-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow eyebrow--light"><span aria-hidden="true"></span> The Budapest series</p>
+          <h2 id="events-title">Next stop: ship.</h2>
+        </div>
+        <p>
+          The rail opens on the next event automatically. Scroll either way to revisit the full series.
+        </p>
+      </div>
+
+      <div class="event-browser" data-event-browser>
+        <div class="event-controls" aria-label="Event navigation">
+          <button type="button" data-event-direction="-1" aria-label="Show previous event">
+            <span aria-hidden="true">←</span>
+          </button>
+          <output data-event-counter aria-live="polite">1 / {events.length}</output>
+          <button type="button" data-event-direction="1" aria-label="Show next event">
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <ol class="event-track" data-event-track aria-label="Shipaton Budapest event dates">
+          {events.map((event) => (
+            <li
+              class="event-card"
+              id={event.slug}
+              data-event-card
+              data-date={event.date}
+              tabindex="0"
+            >
+              <div class="event-card__topline">
+                <span class="event-card__sequence">Orbit {event.sequence}</span>
+                <span class="event-card__state" data-event-state>Scheduled</span>
+              </div>
+              <time datetime={event.date}>{dateFormatter.format(new Date(`${event.date}T12:00:00Z`))}</time>
+              <h3>{event.title}</h3>
+              <p class="event-card__format">{event.format}</p>
+              <p class="event-card__description">{event.description}</p>
+              <dl>
+                <div>
+                  <dt>When</dt>
+                  <dd>{event.time}</dd>
+                </div>
+                <div>
+                  <dt>Where</dt>
+                  <dd>{event.venue}</dd>
+                </div>
+              </dl>
+              <span class="event-card__soon">Local RSVP opens soon</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <p class="schedule-note">
+        <span aria-hidden="true">✦</span> Schedule draft — final venues, times, and local registration links will be added as they are confirmed.
+      </p>
+    </section>
+
+    <section class="principles" aria-labelledby="principles-title">
+      <div class="principles__intro">
+        <p class="eyebrow"><span aria-hidden="true"></span> Friendly room, useful work</p>
+        <h2 id="principles-title">Less conference.<br />More making.</h2>
+      </div>
+      <ol>
+        <li>
+          <span>01</span>
+          <h3>Pick a small scope</h3>
+          <p>Start with the version you can finish, test, and explain without a pitch deck.</p>
+        </li>
+        <li>
+          <span>02</span>
+          <h3>Build beside people</h3>
+          <p>Bring the awkward blocker. Someone else in the room has probably met it already.</p>
+        </li>
+        <li>
+          <span>03</span>
+          <h3>Leave with movement</h3>
+          <p>Every session ends with a concrete next step—and the next date already on the rail.</p>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Shipaton Budapest · community event series · 2026</p>
+    <p>Official Shipaton artwork by RevenueCat, used from the free-to-use media kit.</p>
+  </footer>
+
+  <script is:inline src="/scripts/event-rail.js" defer></script>
+</BaseLayout>

@@ -1,0 +1,24 @@
+{
+  "name": "shipaton-budapest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "pretest": "npm run build",
+    "test": "playwright test",
+    "test:ui": "playwright test"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^24.10.0",
+    "astro": "^7.0.6",
+    "typescript": "^6.0.3",
+    "wrangler": "4.110.0"
+  }
+}
