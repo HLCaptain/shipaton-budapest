@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload local Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-local
           path: playwright-report/
@@ -81,11 +81,11 @@ jobs:
 
       - name: Checkout
         if: steps.config.outputs.configured == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
         if: steps.config.outputs.configured == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -128,10 +128,10 @@ jobs:
     if: always() && needs.validate.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.preview-url != ''
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-hosted
           path: playwright-report/
