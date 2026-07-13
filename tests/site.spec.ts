@@ -76,3 +76,29 @@ test("keeps content inside the viewport and exposes the important links", async 
   expect(pageWeight.requests).toBeLessThanOrEqual(8);
   expect(pageWeight.bytes).toBeLessThan(300 * 1024);
 });
+
+test("uses an attached event extension and a full-width dark footer", async ({ page }) => {
+  await page.goto("/");
+
+  const treatment = await page.locator('[data-event-card][aria-current="date"]').evaluate((card) => {
+    const extension = getComputedStyle(card, "::after");
+    const cardWidth = card.getBoundingClientRect().width;
+    const footer = document.querySelector(".site-footer");
+
+    return {
+      cardWidth,
+      extensionHeight: Number.parseFloat(extension.height),
+      extensionWidth: Number.parseFloat(extension.width),
+      footerBackground: footer ? getComputedStyle(footer).backgroundColor : "",
+      footerWidth: footer?.getBoundingClientRect().width ?? 0,
+      viewportWidth: window.innerWidth,
+      boxShadow: getComputedStyle(card).boxShadow
+    };
+  });
+
+  expect(treatment.boxShadow).toBe("none");
+  expect(treatment.extensionHeight).toBeGreaterThan(0);
+  expect(treatment.extensionWidth).toBeLessThan(treatment.cardWidth);
+  expect(treatment.footerBackground).toBe("rgb(23, 19, 38)");
+  expect(treatment.footerWidth).toBe(treatment.viewportWidth);
+});
