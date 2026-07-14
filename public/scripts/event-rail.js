@@ -58,6 +58,9 @@ if (browser && track && cards.length && counter) {
 
   cards.forEach((card, index) => {
     card.addEventListener("focusin", () => selectCard(index, true));
+    card.addEventListener("click", (event) => {
+      if (!event.target.closest("a")) selectCard(index, true);
+    });
   });
 
   track.addEventListener(

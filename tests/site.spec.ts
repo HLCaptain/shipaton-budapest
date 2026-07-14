@@ -92,21 +92,100 @@ test("uses a full-width dark footer", async ({ page }) => {
   expect(treatment.width).toBe(treatment.viewportWidth);
 });
 
-test("extrudes Budapest kickoff from its original position on hover", async ({ page }, testInfo) => {
+test("selects and extrudes every event without changing its layout footprint", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  for (const date of ["2026-08-01", "2026-08-22", "2026-09-12", "2026-09-30"]) {
+    const card = page.locator(`[data-event-card][data-date="${date}"]`);
+    const before = await card.evaluate((element) => ({
+      offsetHeight: (element as HTMLElement).offsetHeight,
+      offsetLeft: (element as HTMLElement).offsetLeft,
+      offsetWidth: (element as HTMLElement).offsetWidth
+    }));
+
+    await card.locator("h3").click();
+
+    await expect(card).toHaveAttribute("aria-current", "date");
+    await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveCount(1);
+    await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
+    await expect.poll(() => card.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
+    const after = await card.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        boxShadow: style.boxShadow,
+        offsetHeight: (element as HTMLElement).offsetHeight,
+        offsetLeft: (element as HTMLElement).offsetLeft,
+        offsetWidth: (element as HTMLElement).offsetWidth,
+        translate: style.translate
+      };
+    });
+
+    expect(after.boxShadow).toContain("rgb(255, 129, 0)");
+    expect(after.translate).toMatch(/^-/);
+    expect(after.offsetHeight).toBe(before.offsetHeight);
+    expect(after.offsetLeft).toBe(before.offsetLeft);
+    expect(after.offsetWidth).toBe(before.offsetWidth);
+  }
+
+  await expect(page.locator("[data-event-counter]")).toHaveText("4 / 4");
+});
+
+test("outlines neighboring events and extrudes backdrop cards only on hover", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Show previous event" }).click();
+  await page.getByRole("button", { name: "Show next event" }).click();
+  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-09-12");
 
-  const card = page.locator('[data-event-card][data-date="2026-08-01"]');
-  await expect(card).toHaveAttribute("aria-current", "date");
-  const before = await card.boundingBox();
-  await card.hover();
-  await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
-  const after = await card.boundingBox();
+  const neighbor = page.locator('[data-event-card][data-date="2026-09-30"]');
+  await expect(neighbor).not.toHaveAttribute("data-selected", "");
+  const neighborBox = await neighbor.boundingBox();
+  expect(neighborBox).not.toBeNull();
+  await page.mouse.move(neighborBox!.x + 8, neighborBox!.y + 80);
+  await expect(neighbor).not.toHaveAttribute("data-selected", "");
+  await expect.poll(() => neighbor.evaluate((element) => getComputedStyle(element).borderColor)).toBe("rgb(255, 129, 0)");
+  const neighborHover = await neighbor.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      borderColor: style.borderColor,
+      boxShadow: style.boxShadow,
+      translate: style.translate
+    };
+  });
 
-  expect(before).not.toBeNull();
-  expect(after).not.toBeNull();
-  expect(after!.x).toBeLessThan(before!.x - 5);
-  expect(after!.y).toBeLessThan(before!.y - 5);
+  expect(neighborHover.borderColor).toBe("rgb(255, 129, 0)");
+  expect(neighborHover.boxShadow).toBe("none");
+  expect(neighborHover.translate).toBe("0px");
+
+  for (const backdrop of [
+    page.getByRole("link", { name: "Explore the dates" }),
+    page.locator(".hero__art")
+  ]) {
+    await page.mouse.move(0, 0);
+    const before = await backdrop.evaluate((element) => ({
+      boxShadow: getComputedStyle(element).boxShadow,
+      offsetHeight: (element as HTMLElement).offsetHeight,
+      offsetWidth: (element as HTMLElement).offsetWidth
+    }));
+
+    expect(before.boxShadow).toBe("none");
+    await backdrop.hover();
+    await expect.poll(() => backdrop.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(23, 19, 38)");
+    await expect.poll(() => backdrop.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
+    const after = await backdrop.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        boxShadow: style.boxShadow,
+        offsetHeight: (element as HTMLElement).offsetHeight,
+        offsetWidth: (element as HTMLElement).offsetWidth,
+        translate: style.translate
+      };
+    });
+
+    expect(after.boxShadow).not.toBe("none");
+    expect(after.translate).toMatch(/^-/);
+    expect(after.offsetHeight).toBe(before.offsetHeight);
+    expect(after.offsetWidth).toBe(before.offsetWidth);
+  }
 });

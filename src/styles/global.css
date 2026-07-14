@@ -11,7 +11,6 @@
   --canvas: #f4efe5;
   --line: rgb(40 32 71 / 0.24);
   --line-strong: rgb(40 32 71 / 0.68);
-  --shadow: 8px 8px 0 var(--space);
   --radius: 10px;
   --page-gutter: clamp(1.1rem, 4vw, 4rem);
   --max-width: 80rem;
@@ -230,12 +229,11 @@ svg {
   font-size: 0.95rem;
   font-weight: 850;
   text-decoration: none;
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition: box-shadow 160ms ease, translate 160ms ease;
 }
 
 .button--primary {
   background: var(--orange);
-  box-shadow: 5px 5px 0 var(--space);
   color: var(--space);
 }
 
@@ -244,14 +242,11 @@ svg {
   background: var(--paper);
 }
 
-@media (hover: hover) {
-  .button:hover {
-    transform: translate(-2px, -2px);
-  }
-
-  .button--primary:hover {
-    box-shadow: 7px 7px 0 var(--space);
-  }
+:where(.button--primary, .hero__art, .event-card) {
+  --extrusion-color: var(--space);
+  --extrusion-factor: clamp(0.35rem, 0.75vw, 0.5rem);
+  box-shadow: none;
+  translate: 0 0;
 }
 
 .hero__art {
@@ -261,8 +256,8 @@ svg {
   border: 2px solid var(--space);
   border-radius: var(--radius);
   background: var(--space);
-  box-shadow: var(--shadow);
   transform: rotate(1.3deg);
+  transition: box-shadow 180ms ease, translate 180ms ease;
 }
 
 .hero__art::before,
@@ -414,6 +409,7 @@ svg {
 }
 
 .event-card {
+  --extrusion-color: var(--orange);
   position: relative;
   display: flex;
   min-height: 31rem;
@@ -423,29 +419,36 @@ svg {
   border-radius: var(--radius);
   background: var(--space);
   color: var(--paper);
+  cursor: pointer;
   list-style: none;
   opacity: 0.62;
   scroll-snap-align: center;
   transform: scale(0.96);
-  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease, translate 180ms ease;
 }
 
 .event-card[data-selected] {
   border-color: var(--orange);
+  box-shadow: var(--extrusion-factor) var(--extrusion-factor) 0 var(--extrusion-color);
   opacity: 1;
+  translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
   transform: scale(1);
 }
 
 @media (hover: hover) {
-  .event-card:hover {
-    border-color: var(--orange);
-    box-shadow: 0.5rem 0.5rem 0 var(--orange);
-    opacity: 1;
-    transform: translate(-0.5rem, -0.5rem) scale(0.96);
+  .button:hover {
+    translate: -2px -2px;
   }
 
-  .event-card[data-selected]:hover {
-    transform: translate(-0.5rem, -0.5rem) scale(1);
+  .button--primary:hover,
+  .hero__art:hover {
+    box-shadow: var(--extrusion-factor) var(--extrusion-factor) 0 var(--extrusion-color);
+    translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
+  }
+
+  .event-card:not([data-selected]):hover {
+    border-color: var(--orange);
+    opacity: 1;
   }
 }
 
