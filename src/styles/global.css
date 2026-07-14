@@ -217,6 +217,11 @@ svg {
   gap: 0.85rem;
 }
 
+.button-hit-area {
+  display: inline-flex;
+  text-decoration: none;
+}
+
 .button {
   display: inline-flex;
   min-height: 3.25rem;
@@ -446,7 +451,7 @@ svg {
     translate: -2px -2px;
   }
 
-  .button--primary:hover,
+  .button-hit-area:hover > .button--primary,
   .hero__art:hover {
     box-shadow: var(--extrusion-shadow);
     translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
@@ -770,6 +775,7 @@ a.event-card__soon:hover {
   }
 
   .hero__actions,
+  .button-hit-area,
   .button {
     width: 100%;
   }

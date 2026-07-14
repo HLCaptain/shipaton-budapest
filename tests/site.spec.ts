@@ -268,7 +268,7 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
   expect(neighborHover.translate).toBe("0px");
 
   for (const backdrop of [
-    page.getByRole("link", { name: "Explore the dates" }),
+    page.getByRole("link", { name: "Explore the dates" }).locator(".button--primary"),
     page.locator(".hero__art")
   ]) {
     await page.mouse.move(0, 0);
@@ -297,4 +297,25 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
     expect(after.offsetHeight).toBe(before.offsetHeight);
     expect(after.offsetWidth).toBe(before.offsetWidth);
   }
+
+  const primary = page.getByRole("link", { name: "Explore the dates" });
+  await page.mouse.move(0, 0);
+  const primaryBox = await primary.boundingBox();
+  expect(primaryBox).not.toBeNull();
+  const corner = { x: primaryBox!.x + primaryBox!.width - 3, y: primaryBox!.y + primaryBox!.height - 2 };
+  for (let frame = 0; frame < 10; frame += 1) {
+    await page.mouse.move(corner.x, corner.y);
+    await page.waitForTimeout(20);
+  }
+  const cornerHover = await primary.evaluate((element) => {
+    const face = element.querySelector<HTMLElement>(".button--primary")!;
+    return {
+      hovered: element.matches(":hover"),
+      translate: getComputedStyle(face).translate
+    };
+  });
+
+  expect(cornerHover).toEqual({ hovered: true, translate: "-8px -8px" });
+  await page.mouse.click(corner.x, corner.y);
+  await expect(page).toHaveURL(/#events$/);
 });

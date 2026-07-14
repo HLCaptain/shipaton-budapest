@@ -36,7 +36,11 @@ const date = new Intl.DateTimeFormat("en-GB", {
       <p>{event.data.description}</p>
       {(event.data.presentation || event.data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
-          {event.data.presentation && <a class="button button--primary" href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></a>}
+          {event.data.presentation && (
+            <a class="button-hit-area" href={event.data.presentation}>
+              <span class="button button--primary">Open presentation <span aria-hidden="true">↗</span></span>
+            </a>
+          )}
           {event.data.attachment && <a class="button button--quiet" href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></a>}
         </nav>
       )}
