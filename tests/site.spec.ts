@@ -105,10 +105,15 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-document__facts")).toContainText("Local registration opens soon");
   await expect(page.getByRole("link", { name: /official listing/ })).toHaveAttribute("href", "https://www.shipaton.com/events");
   await expect(page.locator(".event-schedule > ol > li")).toHaveCount(4);
-  await expect(page.locator(".event-schedule__index")).toHaveText(["01", "02", "03", "04"]);
+  await expect(page.locator(".event-schedule__index")).toHaveCount(0);
   await expect(page.locator(".event-schedule__time")).toHaveText(["Check-in", "Clinics", "Test pass", "Wrap-up"]);
-  await expect(page.locator(".event-schedule > ol")).not.toHaveCSS("gap", "normal");
-  await expect(page.getByRole("link", { name: "All events", exact: true }).first()).not.toHaveClass(/button/);
+  await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
+  await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
+  await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const backLink = page.getByRole("link", { name: "All events", exact: true }).first();
+  await expect(backLink).toHaveClass(/button--quiet/);
+  await expect(backLink).toHaveClass(/button--compact/);
+  expect(await backLink.evaluate((link) => link.getBoundingClientRect().width < link.parentElement!.getBoundingClientRect().width)).toBe(true);
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
   await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
 
@@ -116,14 +121,24 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/events\/$/);
 });
 
-test("keeps Budapest beside the brand and exposes organizer credits", async ({ page }) => {
+test("keeps Budapest beside the brand and exposes contact links", async ({ page }) => {
   await page.goto("/");
 
   const brand = page.getByRole("link", { name: "Shipaton Budapest home" });
+  const footer = page.locator(".site-footer");
   await expect(brand.locator("span")).toHaveText("Budapest");
   await expect(page.getByRole("link", { name: /Media kit/ })).toHaveAttribute("href", "https://www.shipaton.com/media-kit");
-  await expect(page.getByRole("link", { name: /Organizer on GitHub/ })).toHaveAttribute("href", "https://github.com/HLCaptain");
-  await expect(page.getByRole("link", { name: /@hlcaptain on X/ })).toHaveAttribute("href", "https://x.com/hlcaptain");
+  await expect(footer.getByRole("heading", { name: "Contact" })).toBeVisible();
+  const githubLink = footer.getByRole("link", { name: "GitHub", exact: true });
+  await expect(githubLink).toHaveAttribute("href", "https://github.com/HLCaptain");
+  await expect(footer.getByRole("link", { name: "X", exact: true })).toHaveAttribute("href", "https://x.com/hlcaptain");
+  await expect(footer.locator(".social-link svg")).toHaveCount(2);
+  await expect(footer).not.toContainText(/\bfour\b|@hlcaptain|Official media-kit assets/i);
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await githubLink.hover();
+    await expect(githubLink).toHaveCSS("background-color", "rgb(255, 129, 0)");
+    await expect(githubLink).toHaveCSS("color", "rgb(23, 19, 38)");
+  }
 });
 
 test("uses a responsive multi-column dark footer with readable type", async ({ page }) => {
@@ -147,10 +162,14 @@ test("uses a responsive multi-column dark footer with readable type", async ({ p
   expect(treatment.fontSize).toBeGreaterThanOrEqual(14);
   expect(treatment.scrollWidth).toBeLessThanOrEqual(treatment.viewportWidth);
   expect(treatment.width).toBe(treatment.viewportWidth);
-  await expect(page.locator(".site-footer nav")).toHaveCount(3);
+  await expect(page.locator(".site-footer__column")).toHaveCount(3);
+  await expect(page.locator(".site-footer nav")).toHaveCount(2);
 });
 
-test("deep-links to Markdown headings and copies their references", async ({ page }) => {
+test("deep-links to Markdown headings and copies their references", async ({ page }, testInfo) => {
+  if (testInfo.project.name === "tablet") {
+    await page.setViewportSize({ width: 640, height: 900 });
+  }
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -168,8 +187,20 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
   await expect(page).toHaveURL(/\/events\/ship-clinic\/#goals$/);
   await expect(heading).toHaveAttribute("id", "goals");
   await expect(heading).toBeInViewport();
-  const copy = page.locator(".event-document__heading-row").filter({ has: heading }).getByRole("button");
+  const headingRow = page.locator(".event-document__heading-row").filter({ has: heading });
+  const copy = headingRow.getByRole("button");
   await expect(copy).toHaveAccessibleName("Copy link to Goals");
+  expect((await copy.boundingBox())!.x).toBeGreaterThanOrEqual(0);
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await page.mouse.move(0, 0);
+    await expect(copy).toHaveCSS("opacity", "0");
+    await headingRow.hover();
+    await expect(copy).toHaveCSS("opacity", "1");
+  } else {
+    await expect(copy).toHaveCSS("opacity", "1");
+  }
+  await copy.focus();
+  await expect(copy).toHaveCSS("opacity", "1");
   await copy.click();
 
   await expect(copy).toHaveAttribute("data-state", "copied");

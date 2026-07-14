@@ -16,8 +16,8 @@ if (article && copyStatus) {
     button.title = `Copy link to ${label}`;
     button.setAttribute("aria-label", `Copy link to ${label}`);
     button.innerHTML = `
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-        <path d="M9.5 14.5 14.5 9M7.1 17.9l-1 1a3.54 3.54 0 0 1-5-5l4-4a3.54 3.54 0 0 1 5 0M16.9 6.1l1-1a3.54 3.54 0 1 1 5 5l-4 4a3.54 3.54 0 0 1-5 0" />
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+        <path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25Zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0Z" />
       </svg>
     `;
 
@@ -41,6 +41,6 @@ if (article && copyStatus) {
       }
     });
 
-    row.append(button);
+    row.prepend(button);
   }
 }

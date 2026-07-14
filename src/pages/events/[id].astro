@@ -1,6 +1,8 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
+import ButtonLink from "../../components/ButtonLink.astro";
+import SectionHeading from "../../components/SectionHeading.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
@@ -28,10 +30,9 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
 <BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
   <main class="event-document" id="main-content">
-    <a class="event-document__back" href="/events/">
-      <span class="event-document__back-icon" aria-hidden="true">←</span>
-      <span>All events</span>
-    </a>
+    <ButtonLink class="button--compact event-document__back" href="/events/">
+      <span aria-hidden="true">←</span> All events
+    </ButtonLink>
 
     <header class="event-document__header">
       <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
@@ -73,25 +74,21 @@ const date = new Intl.DateTimeFormat("en-GB", {
       {(event.data.rsvp || event.data.presentation || event.data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
           {event.data.rsvp && (
-            <a class="button-hit-area" href={event.data.rsvp} rel="noreferrer">
-              <span class="button button--primary">RSVP <span aria-hidden="true">↗</span></span>
-            </a>
+            <ButtonLink href={event.data.rsvp} rel="noreferrer" variant="primary">
+              RSVP <span aria-hidden="true">↗</span>
+            </ButtonLink>
           )}
-          {event.data.presentation && <a class="button button--quiet" href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></a>}
-          {event.data.attachment && <a class="button button--quiet" href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></a>}
+          {event.data.presentation && <ButtonLink href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></ButtonLink>}
+          {event.data.attachment && <ButtonLink href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></ButtonLink>}
         </nav>
       )}
     </header>
 
     <section class="event-schedule" aria-labelledby="schedule-title">
-      <div class="event-section-heading">
-        <p class="eyebrow"><span aria-hidden="true"></span> Run of show</p>
-        <h2 id="schedule-title">Schedule</h2>
-      </div>
+      <SectionHeading eyebrow="Run of show" id="schedule-title" title="Schedule" />
       <ol role="list">
-        {event.data.schedule.map((item, index) => (
+        {event.data.schedule.map((item) => (
           <li>
-            <span class="event-schedule__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <span class="event-schedule__time">{item.time}</span>
             <div>
               <h3>{item.title}</h3>
@@ -104,10 +101,7 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
     {speakers.length > 0 && (
       <section class="event-speakers" aria-labelledby="speakers-title">
-        <div class="event-section-heading">
-          <p class="eyebrow"><span aria-hidden="true"></span> Meet the people</p>
-          <h2 id="speakers-title">Speakers</h2>
-        </div>
+        <SectionHeading eyebrow="Meet the people" id="speakers-title" title="Speakers" />
         <ul>
           {speakers.map((speaker) => (
             <li>
@@ -120,10 +114,7 @@ const date = new Intl.DateTimeFormat("en-GB", {
     )}
 
     <section class="event-about" aria-labelledby="about-title">
-      <div class="event-section-heading">
-        <p class="eyebrow"><span aria-hidden="true"></span> Know before you go</p>
-        <h2 id="about-title">About this event</h2>
-      </div>
+      <SectionHeading eyebrow="Know before you go" id="about-title" title="About this event" />
       <div class="event-about__layout">
         {contentHeadings.length > 0 && (
           <nav class="event-document__toc" aria-label="On this page">
@@ -144,10 +135,9 @@ const date = new Intl.DateTimeFormat("en-GB", {
       <p class="visually-hidden" role="status" aria-live="polite" data-heading-copy-status></p>
     </section>
 
-    <a class="event-document__end-link" href="/events/">
-      <span class="event-document__back-icon" aria-hidden="true">←</span>
-      <span>Back to all events</span>
-    </a>
+    <ButtonLink class="button--compact event-document__end-link" href="/events/">
+      <span aria-hidden="true">←</span> Back to all events
+    </ButtonLink>
   </main>
 
   <script is:inline src="/scripts/event-document.js" defer></script>

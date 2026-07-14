@@ -1,0 +1,14 @@
+---
+type Props = {
+  eyebrow: string;
+  id: string;
+  title: string;
+};
+
+const { eyebrow, id, title } = Astro.props;
+---
+
+<div class="event-section-heading">
+  <p class="eyebrow"><span aria-hidden="true"></span> {eyebrow}</p>
+  <h2 id={id}>{title}</h2>
+</div>

@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import ButtonLink from "../components/ButtonLink.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const events = (await getCollection("events")).sort((a, b) => a.data.date.localeCompare(b.data.date));
@@ -27,14 +28,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
           Practical Budapest meetups for finding momentum, getting unstuck, and crossing the finish line together.
         </p>
         <div class="hero__actions">
-          <a class="button-hit-area" href="#events">
-            <span class="button button--primary">Explore the dates <span aria-hidden="true">↓</span></span>
-          </a>
-          <a
-            class="button button--quiet"
+          <ButtonLink href="#events" variant="primary">
+            Explore the dates <span aria-hidden="true">↓</span>
+          </ButtonLink>
+          <ButtonLink
             href="https://revenuecat-shipaton-2026.devpost.com/"
             rel="noreferrer"
-          >Join Shipaton <span aria-hidden="true">↗</span></a>
+          >Join Shipaton <span aria-hidden="true">↗</span></ButtonLink>
         </div>
       </div>
       <a
