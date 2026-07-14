@@ -96,6 +96,8 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Meet. Make.");
   await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
   await expect(page.locator(".event-grid-card")).toHaveCount(4);
+  await expect(page.locator(".event-grid-card__link")).toHaveCount(4);
+  await expect(page.locator("a a")).toHaveCount(0);
   await page.getByRole("link", { name: /Ship clinic/ }).click();
 
   await expect(page).toHaveURL(/\/events\/ship-clinic\/$/);

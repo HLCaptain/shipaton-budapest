@@ -2,6 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
 import ButtonLink from "../../components/ButtonLink.astro";
+import PersonList from "../../components/PersonList.astro";
 import SectionHeading from "../../components/SectionHeading.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
@@ -18,7 +19,10 @@ type Props = {
 
 const { event } = Astro.props;
 const { Content, headings } = await render(event);
+const hosts = event.data.hosts ?? [];
+const organizers = event.data.organizers ?? [];
 const speakers = event.data.speakers ?? [];
+const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const date = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -102,17 +106,14 @@ const date = new Intl.DateTimeFormat("en-GB", {
       </ol>
     </section>
 
-    {speakers.length > 0 && (
-      <section class="event-speakers" aria-labelledby="speakers-title">
-        <SectionHeading eyebrow="Meet the people" id="speakers-title" title="Speakers" />
-        <ul>
-          {speakers.map((speaker) => (
-            <li>
-              <h3>{speaker.url ? <a href={speaker.url} rel="noreferrer">{speaker.name} <span aria-hidden="true">↗</span></a> : speaker.name}</h3>
-              <p>{speaker.role}</p>
-            </li>
-          ))}
-        </ul>
+    {hasPeople && (
+      <section class="event-people" aria-labelledby="people-title">
+        <SectionHeading eyebrow="Meet the people" id="people-title" title="Event team" />
+        <dl class="event-people__groups">
+          {hosts.length > 0 && <PersonList kind="hosts" people={hosts} showRoles />}
+          {organizers.length > 0 && <PersonList kind="organizers" people={organizers} showRoles />}
+          {speakers.length > 0 && <PersonList kind="speakers" people={speakers} showRoles />}
+        </dl>
       </section>
     )}
 

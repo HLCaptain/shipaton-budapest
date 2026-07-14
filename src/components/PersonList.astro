@@ -1,0 +1,36 @@
+---
+type Person = {
+  name: string;
+  role?: string;
+  url?: string;
+};
+
+type Props = {
+  class?: string;
+  kind: "hosts" | "organizers" | "speakers";
+  people: Person[];
+  showRoles?: boolean;
+};
+
+const { class: className, kind, people, showRoles = false } = Astro.props;
+const singular = { hosts: "Host", organizers: "Organizer", speakers: "Speaker" }[kind];
+const label = people.length === 1 ? singular : `${singular}s`;
+---
+
+<div class:list={["person-list", className]} data-event-people={kind}>
+  <dt>{label}</dt>
+  <dd>
+    <ul class="person-list__items" role="list">
+      {people.map((person) => (
+        <li>
+          {person.url
+            ? <a href={person.url} target="_blank" rel="noopener noreferrer">
+                {person.name} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+              </a>
+            : <span>{person.name}</span>}
+          {showRoles && person.role && <span class="person-list__role">{person.role}</span>}
+        </li>
+      ))}
+    </ul>
+  </dd>
+</div>

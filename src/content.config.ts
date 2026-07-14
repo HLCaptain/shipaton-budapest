@@ -2,6 +2,12 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+const person = z.object({
+  name: z.string(),
+  role: z.string().optional(),
+  url: z.url().optional()
+});
+
 const events = defineCollection({
   loader: glob({ base: "./src/content/events", pattern: "**/[^_]*.{md,mdx}" }),
   schema: z.object({
@@ -21,11 +27,9 @@ const events = defineCollection({
     })).min(1),
     rsvp: z.url().optional(),
     locationUrl: z.url().optional(),
-    speakers: z.array(z.object({
-      name: z.string(),
-      role: z.string(),
-      url: z.url().optional()
-    })).optional(),
+    hosts: z.array(person).min(1).optional(),
+    organizers: z.array(person).min(1).optional(),
+    speakers: z.array(person).min(1).optional(),
     presentation: z.string().optional(),
     attachment: z.string().optional()
   })

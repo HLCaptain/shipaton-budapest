@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import PersonList from "../../components/PersonList.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 const events = (await getCollection("events")).sort((a, b) => a.data.date.localeCompare(b.data.date));
@@ -27,12 +28,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
     <ol class="event-grid" aria-label="Shipaton Budapest events">
       {events.map(({ id, data: event }) => (
         <li>
-          <a class="event-grid-card" href={`/events/${id}/`}>
+          <article class="event-grid-card">
             <div class="event-grid-card__topline">
               <span>Orbit {event.sequence}</span>
               <time datetime={event.date}>{dateFormatter.format(new Date(`${event.date}T12:00:00Z`))}</time>
             </div>
-            <h2>{event.title}</h2>
+            <h2><a class="event-grid-card__link" href={`/events/${id}/`}>{event.title}</a></h2>
             <p class="event-grid-card__format">{event.format}</p>
             <p>{event.description}</p>
             <dl>
@@ -44,12 +45,16 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                 <dt>Where</dt>
                 <dd>{event.venue}</dd>
               </div>
+              {event.hosts && <PersonList kind="hosts" people={event.hosts} />}
+              {event.speakers && (
+                <PersonList class="event-grid-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
+              )}
             </dl>
             <ul class="tag-list" aria-label="Event tags">
               {event.tags.map((tag) => <li>{tag}</li>)}
             </ul>
             <span class="event-grid-card__cta">Event details <span aria-hidden="true">→</span></span>
-          </a>
+          </article>
         </li>
       ))}
     </ol>
