@@ -121,7 +121,7 @@ test("selects and extrudes every event without changing its layout footprint", a
       };
     });
 
-    expect(after.boxShadow).toContain("rgb(255, 129, 0)");
+    expect(after.boxShadow.match(/rgb\(255, 129, 0\)/g)).toHaveLength(4);
     expect(after.translate).toMatch(/^-/);
     expect(after.offsetHeight).toBe(before.offsetHeight);
     expect(after.offsetLeft).toBe(before.offsetLeft);
@@ -129,6 +129,53 @@ test("selects and extrudes every event without changing its layout footprint", a
   }
 
   await expect(page.locator("[data-event-counter]")).toHaveText("4 / 4");
+});
+
+test("keeps mouse selection stable while smoothly centering", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
+  await page.goto("/");
+
+  const track = page.locator("[data-event-track]");
+  await page.locator("#events").scrollIntoViewIfNeeded();
+  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const rail = document.querySelector<HTMLElement>("[data-event-track]")!;
+    const cards = [...document.querySelectorAll<HTMLElement>("[data-event-card]")];
+    const selections: string[] = [];
+    const scrollPositions: number[] = [];
+    const save = () => {
+      document.documentElement.dataset.selectionTrace = JSON.stringify(selections);
+      document.documentElement.dataset.scrollTrace = JSON.stringify(scrollPositions);
+    };
+    new MutationObserver(() => {
+      selections.push(cards.find((card) => card.hasAttribute("data-selected"))?.dataset.date ?? "");
+      save();
+    }).observe(rail, { attributes: true, attributeFilter: ["data-selected"], subtree: true });
+    rail.addEventListener("scroll", () => {
+      scrollPositions.push(Math.round(rail.scrollLeft));
+      save();
+    }, { passive: true });
+    save();
+  });
+
+  const card = page.locator('[data-event-card][data-date="2026-09-12"]');
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click(box!.x + 8, box!.y + 80);
+
+  await expect(card).toHaveAttribute("aria-current", "date");
+  await expect.poll(() => card.evaluate((element) => {
+    const rail = element.parentElement;
+    const left = (element as HTMLElement).offsetLeft - (rail!.clientWidth - (element as HTMLElement).offsetWidth) / 2;
+    return Math.abs(rail!.scrollLeft - left);
+  })).toBeLessThan(2);
+  const trace = await page.evaluate(() => ({
+    scroll: JSON.parse(document.documentElement.dataset.scrollTrace ?? "[]"),
+    selections: JSON.parse(document.documentElement.dataset.selectionTrace ?? "[]")
+  }));
+
+  expect(trace.selections).toEqual(["2026-09-12"]);
+  expect(new Set(trace.scroll).size).toBeGreaterThan(3);
 });
 
 test("outlines neighboring events and extrudes backdrop cards only on hover", async ({ page }, testInfo) => {
@@ -183,7 +230,7 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
       };
     });
 
-    expect(after.boxShadow).not.toBe("none");
+    expect(after.boxShadow.match(/rgb\(23, 19, 38\)/g)).toHaveLength(4);
     expect(after.translate).toMatch(/^-/);
     expect(after.offsetHeight).toBe(before.offsetHeight);
     expect(after.offsetWidth).toBe(before.offsetWidth);
