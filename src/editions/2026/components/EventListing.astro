@@ -1,0 +1,67 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { eventPath } from "../events";
+import PersonList from "./PersonList.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+type Props = {
+  events: CollectionEntry<"events2026">[];
+};
+
+const { events } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Budapest"
+});
+---
+
+<BaseLayout
+  title="Events · Shipaton Budapest"
+  description="Browse 2026 Shipaton Budapest events and open each session for its details, agenda, and attendance information."
+>
+  <main class="events-page" id="main-content">
+    <header class="events-page__intro">
+      <p class="eyebrow"><span aria-hidden="true"></span> Budapest 2026 events</p>
+      <h1>Meet. Make.<br />Ship together.</h1>
+      <p class="events-page__lede">
+        Pick the session that matches where your app is now. Each event page has the agenda, practical details, and what to bring.
+      </p>
+    </header>
+
+    <ol class="event-grid" aria-label="2026 Shipaton Budapest events">
+      {events.map((entry) => (
+        <li>
+          <article class="event-grid-card">
+            <div class="event-grid-card__topline">
+              <span>Orbit {entry.data.sequence}</span>
+              <time datetime={entry.data.date}>{dateFormatter.format(new Date(`${entry.data.date}T12:00:00Z`))}</time>
+            </div>
+            <h2><a class="event-grid-card__link" href={eventPath(entry)}>{entry.data.title}</a></h2>
+            <p class="event-grid-card__format">{entry.data.format}</p>
+            <p>{entry.data.description}</p>
+            <dl>
+              <div>
+                <dt>When</dt>
+                <dd>{entry.data.time}</dd>
+              </div>
+              <div>
+                <dt>Where</dt>
+                <dd>{entry.data.venue}</dd>
+              </div>
+              {entry.data.hosts && <PersonList kind="hosts" people={entry.data.hosts} />}
+              {entry.data.speakers && (
+                <PersonList class="event-grid-card__speakers" kind="speakers" people={entry.data.speakers.slice(0, 3)} />
+              )}
+            </dl>
+            <ul class="tag-list" aria-label="Event tags">
+              {entry.data.tags.map((tag) => <li>{tag}</li>)}
+            </ul>
+            <span class="event-grid-card__cta">Event details <span aria-hidden="true">→</span></span>
+          </article>
+        </li>
+      ))}
+    </ol>
+  </main>
+</BaseLayout>

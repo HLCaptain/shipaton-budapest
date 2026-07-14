@@ -821,7 +821,7 @@ a.event-card__soon:hover {
   line-height: 0.88;
 }
 
-.events-page__intro > p:last-child {
+.events-page__lede {
   max-width: 32rem;
   margin: 0 0 0.35rem;
   color: var(--ink-soft);
@@ -1159,7 +1159,7 @@ a.event-card__soon:hover {
 .event-about__heading,
 .event-about__layout {
   display: grid;
-  grid-template-columns: minmax(10rem, 0.28fr) minmax(0, 48rem);
+  grid-template-columns: minmax(0, 48rem) minmax(10rem, 0.28fr);
   align-items: start;
   justify-content: space-between;
   gap: clamp(2rem, 6vw, 5rem);
@@ -1170,15 +1170,19 @@ a.event-card__soon:hover {
 }
 
 .event-about__heading > .event-section-heading {
-  grid-column: 2;
+  grid-column: 1;
   margin-bottom: 0;
 }
 
 .event-document__toc {
   position: sticky;
   top: 1.5rem;
+  max-height: calc(100vh - 3rem);
   padding-block: 0.75rem;
+  grid-column: 2;
+  grid-row: 1;
   border-block: 1px solid var(--line-strong);
+  overflow-y: auto;
 }
 
 .event-document__toc > p {
@@ -1222,6 +1226,8 @@ a.event-card__soon:hover {
 
 .event-document__body {
   max-width: 48rem;
+  grid-column: 1;
+  grid-row: 1;
   font-size: clamp(1.05rem, 1.5vw, 1.14rem);
   line-height: 1.8;
 }
@@ -1306,6 +1312,7 @@ a.event-card__soon:hover {
 @media (max-width: 700px) {
   .event-document__copy-link {
     margin-left: 0;
+    order: 2;
   }
 }
 
@@ -1537,10 +1544,19 @@ a.event-card__soon:hover {
 
   .event-document__toc {
     position: static;
+    max-height: none;
+    grid-column: auto;
+    grid-row: auto;
+    overflow-y: visible;
   }
 
   .event-document__toc ol {
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .event-document__body {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .site-footer__grid {
@@ -1676,10 +1692,6 @@ a.event-card__soon:hover {
     padding-top: 0;
   }
 
-  .event-document__toc ol {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .site-footer__grid {
     gap: 2.5rem 1.5rem;
   }
@@ -1687,7 +1699,6 @@ a.event-card__soon:hover {
 }
 
 @media (max-width: 360px) {
-  .event-document__toc ol,
   .site-footer__grid {
     grid-template-columns: 1fr;
   }

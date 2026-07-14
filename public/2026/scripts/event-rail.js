@@ -80,8 +80,8 @@ const initEventRail = () => {
   const featuredLink = document.querySelector("[data-featured-event]");
   selectCard(featuredIndex);
 
-  if (featuredLink && featuredCard.dataset.eventId) {
-    featuredLink.href = `/events/${featuredCard.dataset.eventId}/`;
+  if (featuredLink && featuredCard.dataset.eventUrl) {
+    featuredLink.href = featuredCard.dataset.eventUrl;
     featuredLink.setAttribute("aria-label", `View ${featuredCard.dataset.title} event details`);
     const title = featuredLink.querySelector("[data-featured-title]");
     const location = featuredLink.querySelector("[data-featured-location]");

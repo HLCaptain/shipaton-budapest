@@ -19,13 +19,22 @@ test.beforeEach(async ({ page }) => {
   await freezeDate(page, "2026-08-10T10:00:00+02:00");
 });
 
+test("redirects the root to the current edition", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/2026\/$/);
+  await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
+  expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("local runway");
+});
+
 test("opens on the next event without moving the page vertically", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
 
-  await page.goto("/");
+  await page.goto("/2026/");
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("local runway");
   await expect(page.locator("[data-event-card]")).toHaveCount(4);
@@ -37,7 +46,7 @@ test("opens on the next event without moving the page vertically", async ({ page
 });
 
 test("can select an earlier event by scrolling back", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const track = page.locator("[data-event-track]");
   await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
@@ -51,9 +60,9 @@ test("can select an earlier event by scrolling back", async ({ page }) => {
 });
 
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
-  await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute("href", "/events/");
+  await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute("href", "/2026/events/");
   await expect(page.getByRole("link", { name: "Explore the dates" })).toHaveAttribute("href", "#events");
   await expect(page.getByRole("link", { name: /Join Shipaton/ })).toHaveAttribute(
     "href",
@@ -79,20 +88,46 @@ test("keeps content inside the viewport and exposes the important links", async 
 });
 
 test("links the hero art to the next Budapest event", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const heroLink = page.getByRole("link", { name: "View Build sprint 01 event details" });
-  await expect(heroLink).toHaveAttribute("href", "/events/build-sprint-one/");
+  await expect(heroLink).toHaveAttribute("href", "/2026/events/build-sprint-one/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Build sprint 01");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText("Budapest · venue announced soon");
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
+test("publishes the isolated 2026 event routes", async ({ page }) => {
+  await page.goto("/2026/events/");
+
+  await expect(page).toHaveURL(/\/2026\/events\/$/);
+  await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
+  expect(await page.locator(".event-grid-card time").evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("datetime"))
+  )).toEqual(["2026-08-01", "2026-08-22", "2026-09-12", "2026-09-30"]);
+  expect(await page.locator(".event-grid-card__link").evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href"))
+  )).toEqual([
+    "/2026/events/budapest-kickoff/",
+    "/2026/events/build-sprint-one/",
+    "/2026/events/ship-clinic/",
+    "/2026/events/demo-and-submit/"
+  ]);
+  expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/events/");
+  await expect(page.locator('a[href^="/events/"]')).toHaveCount(0);
+
+  await page.getByRole("link", { name: /Ship clinic/ }).click();
+  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/$/);
+  expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe(
+    "/2026/events/ship-clinic/"
+  );
+});
+
 test("navigates from the event grid to MDX details and back", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
   await page.getByRole("link", { name: "Events", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/events\/$/);
+  await expect(page).toHaveURL(/\/2026\/events\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Meet. Make.");
   await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
   await expect(page.locator(".event-grid-card")).toHaveCount(4);
@@ -100,7 +135,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator("a a")).toHaveCount(0);
   await page.getByRole("link", { name: /Ship clinic/ }).click();
 
-  await expect(page).toHaveURL(/\/events\/ship-clinic\/$/);
+  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ship clinic");
   await expect(page.locator(".event-document__facts")).toContainText("Budapest · venue announced soon");
   await expect(page.locator(".event-document__facts")).toContainText("Product feedback · App quality · Store readiness");
@@ -112,7 +147,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  const backLink = page.getByRole("link", { name: "All events", exact: true }).first();
+  const backLink = page.getByRole("link", { name: "2026 events", exact: true }).first();
   await expect(backLink).toHaveClass(/button--quiet/);
   await expect(backLink).toHaveClass(/button--compact/);
   await expect(backLink.locator(".button__icon")).toHaveCount(1);
@@ -120,12 +155,12 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
   await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
 
-  await page.getByRole("link", { name: "Back to all events" }).click();
-  await expect(page).toHaveURL(/\/events\/$/);
+  await page.getByRole("link", { name: "Back to 2026 events" }).click();
+  await expect(page).toHaveURL(/\/2026\/events\/$/);
 });
 
 test("keeps page motion directional and stable from a scrolled route", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const motion = await page.evaluate(() => {
     const root = document.documentElement;
@@ -180,7 +215,7 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
     .getByRole("link", { name: "View event details" })
     .evaluate((link) => (link as HTMLAnchorElement).click());
 
-  await expect(page).toHaveURL(/\/events\/build-sprint-one\/$/);
+  await expect(page).toHaveURL(/\/2026\/events\/build-sprint-one\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-page-direction", "down");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   const motionSource = await page.evaluate(
@@ -189,7 +224,7 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
   expect(motionSource?.offset).toBe(`${-motionSource!.scrollY}px`);
 
   await page.goBack();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/2026\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-page-direction", "up");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(motionSource!.scrollY);
 
@@ -200,19 +235,19 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
 });
 
 test("reinitializes page features across repeated client-side visits", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
   await page.evaluate(() => ((window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker = "alive"));
 
   await page.getByRole("link", { name: "Events", exact: true }).click();
   await page.getByRole("link", { name: /Ship clinic/ }).click();
   await expect(page.getByRole("button", { name: "Copy link to Goals" })).toHaveCount(1);
 
-  await page.getByRole("link", { name: "Back to all events", exact: true }).click();
+  await page.getByRole("link", { name: "Back to 2026 events", exact: true }).click();
   await page.getByRole("link", { name: /Build sprint 01/ }).click();
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/2026\/$/);
   expect(
     await page.evaluate(() => (window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker)
   ).toBe("alive");
@@ -222,29 +257,87 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await expect(page.locator("[data-event-counter]")).toHaveText("3 / 4");
 });
 
-test("keeps the event detail body compact and aligned", async ({ page }) => {
-  await page.goto("/events/build-sprint-one/");
+test("keeps the event detail body aligned with a responsive table of contents", async ({ page }) => {
+  await page.goto("/2026/events/build-sprint-one/");
 
   const aboutHeading = page.getByRole("heading", { name: "About this event", exact: true });
+  const title = page.getByRole("heading", { name: "Build sprint 01", exact: true });
+  const scheduleHeading = page.getByRole("heading", { name: "Schedule", exact: true });
   const body = page.locator(".event-document__body");
+  const toc = page.getByRole("navigation", { name: "On this page" });
   const intro = body.locator("> p").first();
+  const titleBox = await title.boundingBox();
+  const scheduleBox = await scheduleHeading.boundingBox();
   const headingBox = await aboutHeading.boundingBox();
   const bodyBox = await body.boundingBox();
+  const tocBox = await toc.boundingBox();
   const backMargin = await page.locator(".event-document__back").evaluate((element) => getComputedStyle(element).marginBottom);
   const aboutMargin = await page.locator(".event-about").evaluate((element) => getComputedStyle(element).marginTop);
+  const tocLinks = await toc.locator("a").evaluateAll((links) => links.map((link) => {
+    const { x, y } = link.getBoundingClientRect();
+    return { x, y };
+  }));
 
+  expect(titleBox).not.toBeNull();
+  expect(scheduleBox).not.toBeNull();
   expect(headingBox).not.toBeNull();
   expect(bodyBox).not.toBeNull();
+  expect(tocBox).not.toBeNull();
+  expect(Math.abs(titleBox!.x - scheduleBox!.x)).toBeLessThan(1);
+  expect(Math.abs(titleBox!.x - headingBox!.x)).toBeLessThan(1);
   expect(Math.abs(headingBox!.x - bodyBox!.x)).toBeLessThan(1);
+  expect(tocLinks.every((link, index) => index === 0 || (
+    Math.abs(link.x - tocLinks[0].x) < 1 && link.y > tocLinks[index - 1].y
+  ))).toBe(true);
   expect(Number.parseFloat(backMargin)).toBeLessThanOrEqual(56);
   expect(Number.parseFloat(aboutMargin)).toBeLessThanOrEqual(80);
   await expect(intro).toHaveCSS("color", "rgb(81, 70, 99)");
   await expect(intro).toHaveCSS("font-weight", "500");
-  await expect(page.getByRole("link", { name: "Back to all events", exact: true }).locator(".button__icon")).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Back to 2026 events", exact: true }).locator(".button__icon")).toHaveCount(1);
+
+  if (page.viewportSize()!.width > 940) {
+    await expect(toc).toHaveCSS("position", "sticky");
+    await expect(toc).toHaveCSS("overflow-y", "auto");
+    expect(tocBox!.x).toBeGreaterThan(bodyBox!.x + bodyBox!.width - 1);
+
+    await body.evaluate((article) => {
+      const paragraph = article.querySelector("p")!;
+      for (let index = 0; index < 20; index += 1) article.append(paragraph.cloneNode(true));
+    });
+    await toc.locator("ol").evaluate((list) => {
+      const item = list.querySelector("li")!;
+      for (let index = 0; index < 40; index += 1) list.append(item.cloneNode(true));
+    });
+    await page.locator(".event-about").evaluate((section) => {
+      window.scrollTo({
+        behavior: "instant" as ScrollBehavior,
+        top: section.getBoundingClientRect().top + window.scrollY + 200
+      });
+    });
+    await expect.poll(async () => Math.abs((await toc.boundingBox())!.y - 24)).toBeLessThan(2);
+    const tocScroll = await toc.evaluate((element) => {
+      const pageY = window.scrollY;
+      element.scrollTop = 80;
+      return {
+        clientHeight: element.clientHeight,
+        pageY,
+        pageYAfter: window.scrollY,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop
+      };
+    });
+    expect(tocScroll.scrollHeight).toBeGreaterThan(tocScroll.clientHeight);
+    expect(tocScroll.scrollTop).toBeGreaterThan(0);
+    expect(tocScroll.pageYAfter).toBe(tocScroll.pageY);
+  } else {
+    await expect(toc).toHaveCSS("position", "static");
+    await expect(toc).toHaveCSS("overflow-y", "visible");
+    expect(tocBox!.y).toBeLessThan(bodyBox!.y);
+  }
 });
 
 test("keeps Budapest beside the brand and exposes contact links", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const brand = page.getByRole("link", { name: "Shipaton Budapest home" });
   const footer = page.locator(".site-footer");
@@ -264,7 +357,7 @@ test("keeps Budapest beside the brand and exposes contact links", async ({ page 
 });
 
 test("uses a responsive multi-column dark footer with readable type", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const treatment = await page.locator(".site-footer").evaluate((footer) => {
     const grid = footer.querySelector<HTMLElement>(".site-footer__grid")!;
@@ -303,10 +396,10 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
     });
   });
 
-  await page.goto("/events/ship-clinic/#goals");
+  await page.goto("/2026/events/ship-clinic/#goals");
 
   const heading = page.getByRole("heading", { name: "Goals", exact: true });
-  await expect(page).toHaveURL(/\/events\/ship-clinic\/#goals$/);
+  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/#goals$/);
   await expect(heading).toHaveAttribute("id", "goals");
   await expect(heading).toBeInViewport();
   const headingRow = page.locator(".event-document__heading-row").filter({ has: heading });
@@ -327,12 +420,12 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
 
   await expect(copy).toHaveAttribute("data-state", "copied");
   await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to Goals.");
-  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/events\/ship-clinic\/#goals$/);
+  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/2026\/events\/ship-clinic\/#goals$/);
 });
 
 test("selects and extrudes every event without changing its layout footprint", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/2026/");
 
   for (const date of ["2026-08-01", "2026-08-22", "2026-09-12", "2026-09-30"]) {
     const card = page.locator(`[data-event-card][data-date="${date}"]`);
@@ -371,7 +464,7 @@ test("selects and extrudes every event without changing its layout footprint", a
 
 test("keeps mouse selection stable while smoothly centering", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const track = page.locator("[data-event-track]");
   await page.locator("#events").scrollIntoViewIfNeeded();
@@ -427,7 +520,7 @@ test("keeps mouse selection stable while smoothly centering", async ({ page }, t
 
 test("freezes an in-flight transition under the pointer", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
-  await page.goto("/");
+  await page.goto("/2026/");
 
   const track = page.locator("[data-event-track]");
   await page.locator("#events").scrollIntoViewIfNeeded();
@@ -481,7 +574,7 @@ test("freezes an in-flight transition under the pointer", async ({ page }, testI
 test("outlines neighboring events and gives clickable backdrops the right hover color", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/2026/");
   await page.getByRole("button", { name: "Show next event" }).click();
   await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-09-12");
 

@@ -1,12 +1,14 @@
 ---
 import { getCollection } from "astro:content";
-import ButtonLink from "../components/ButtonLink.astro";
-import PersonList from "../components/PersonList.astro";
-import BaseLayout from "../layouts/BaseLayout.astro";
+import ButtonLink from "../../editions/2026/components/ButtonLink.astro";
+import PersonList from "../../editions/2026/components/PersonList.astro";
+import { eventPath } from "../../editions/2026/events";
+import BaseLayout from "../../editions/2026/layouts/BaseLayout.astro";
 
-const events = (await getCollection("events")).sort((a, b) => a.data.date.localeCompare(b.data.date));
+const events = (await getCollection("events2026")).sort((a, b) => a.data.date.localeCompare(b.data.date));
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
 const featuredEvent = events.find(({ data }) => data.date >= today) ?? events.at(-1)!;
+const featuredEventUrl = eventPath(featuredEvent);
 
 const pageTitle = "Shipaton Budapest 2026";
 const description =
@@ -40,13 +42,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
       </div>
       <a
         class="hero__art-link"
-        href={`/events/${featuredEvent.id}/`}
+        href={featuredEventUrl}
         aria-label={`View ${featuredEvent.data.title} event details`}
         data-featured-event
       >
         <figure class="hero__art">
           <img
-            src="/brand/rocket-launch-wide.svg"
+            src="/2026/brand/rocket-launch-wide.svg"
             width="1000"
             height="498"
             alt="Shippy the cat launching in an orange rocket"
@@ -89,7 +91,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
               class="event-card"
               id={id}
               data-event-card
-              data-event-id={id}
+              data-event-url={`/2026/events/${id}/`}
               data-date={event.date}
               data-title={event.title}
               data-venue={event.venue}
@@ -117,7 +119,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                   <PersonList class="event-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
                 )}
               </dl>
-              <a class="event-card__soon" href={`/events/${id}/`}>View event details <span aria-hidden="true">→</span></a>
+              <a class="event-card__soon" href={`/2026/events/${id}/`}>View event details <span aria-hidden="true">→</span></a>
             </li>
           ))}
         </ol>
@@ -153,5 +155,5 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
     </section>
   </main>
 
-  <script is:inline src="/scripts/event-rail.js" defer></script>
+  <script is:inline src="/2026/scripts/event-rail.js" defer></script>
 </BaseLayout>

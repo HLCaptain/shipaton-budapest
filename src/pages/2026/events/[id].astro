@@ -1,20 +1,20 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
-import ButtonLink from "../../components/ButtonLink.astro";
-import PersonList from "../../components/PersonList.astro";
-import SectionHeading from "../../components/SectionHeading.astro";
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
+import PersonList from "../../../editions/2026/components/PersonList.astro";
+import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
+import BaseLayout from "../../../editions/2026/layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
-  return (await getCollection("events")).map((event) => ({
+  return (await getCollection("events2026")).map((event) => ({
     params: { id: event.id },
     props: { event }
   }));
 }
 
 type Props = {
-  event: CollectionEntry<"events">;
+  event: CollectionEntry<"events2026">;
 };
 
 const { event } = Astro.props;
@@ -34,11 +34,11 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
 <BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
   <main class="event-document" id="main-content">
-    <ButtonLink class="button--compact event-document__back" href="/events/">
+    <ButtonLink class="button--compact event-document__back" href="/2026/events/">
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M13 8H3m0 0 4-4M3 8l4 4" />
       </svg>
-      All events
+      2026 events
     </ButtonLink>
 
     <header class="event-document__header">
@@ -141,13 +141,13 @@ const date = new Intl.DateTimeFormat("en-GB", {
       <p class="visually-hidden" role="status" aria-live="polite" data-heading-copy-status></p>
     </section>
 
-    <ButtonLink class="button--compact event-document__end-link" href="/events/">
+    <ButtonLink class="button--compact event-document__end-link" href="/2026/events/">
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M13 8H3m0 0 4-4M3 8l4 4" />
       </svg>
-      Back to all events
+      Back to 2026 events
     </ButtonLink>
   </main>
 
-  <script is:inline src="/scripts/event-document.js" defer></script>
+  <script is:inline src="/2026/scripts/event-document.js" defer></script>
 </BaseLayout>

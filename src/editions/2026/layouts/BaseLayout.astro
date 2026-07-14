@@ -9,11 +9,11 @@ type Props = {
 
 const { title, description } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const eventsCurrent = Astro.url.pathname.startsWith("/events");
+const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-edition="2026">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -21,7 +21,7 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="/brand/shippy-pixel-head.png" type="image/png" />
+    <link rel="icon" href="/2026/brand/shippy-pixel-head.png" type="image/png" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -32,9 +32,9 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Shipaton Budapest home">
+      <a class="brand" href="/2026/" aria-label="Shipaton Budapest home">
         <img
-          src="/brand/shipaton-wordmark.svg"
+          src="/2026/brand/shipaton-wordmark.svg"
           width="535"
           height="128"
           alt="Shipaton 2026"
@@ -43,7 +43,7 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
         <span>Budapest</span>
       </a>
       <nav class="site-header__nav" aria-label="Primary navigation">
-        <a href="/events/" aria-current={eventsCurrent ? "page" : undefined}>Events</a>
+        <a href="/2026/events/" aria-current={eventsCurrent ? "page" : undefined}>Events</a>
         <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
@@ -60,9 +60,9 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
 
         <nav class="site-footer__column" aria-labelledby="footer-explore-title">
           <h2 id="footer-explore-title">Explore</h2>
-          <a href="/">Home</a>
-          <a href="/events/">All events</a>
-          <a href="/events/budapest-kickoff/">Budapest kickoff</a>
+          <a href="/2026/">Home</a>
+          <a href="/2026/events/">All events</a>
+          <a href="/2026/events/budapest-kickoff/">Budapest kickoff</a>
         </nav>
 
         <nav class="site-footer__column" aria-labelledby="footer-shipaton-title">
@@ -94,6 +94,6 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
         <p>Community-led in Budapest · August—September 2026</p>
       </div>
     </footer>
-    <script is:inline src="/scripts/page-transitions.js" defer></script>
+    <script is:inline src="/2026/scripts/page-transitions.js" defer></script>
   </body>
 </html>

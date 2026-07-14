@@ -8,11 +8,11 @@ const person = z.object({
   url: z.url().optional()
 });
 
-const events = defineCollection({
-  loader: glob({ base: "./src/content/events", pattern: "**/[^_]*.{md,mdx}" }),
+const events2026 = defineCollection({
+  loader: glob({ base: "./src/content/events/2026", pattern: "[^_]*.{md,mdx}" }),
   schema: z.object({
     sequence: z.string(),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    date: z.string().regex(/^2026-\d{2}-\d{2}$/),
     title: z.string(),
     format: z.string(),
     description: z.string(),
@@ -35,4 +35,4 @@ const events = defineCollection({
   })
 });
 
-export const collections = { events };
+export const collections = { events2026 };

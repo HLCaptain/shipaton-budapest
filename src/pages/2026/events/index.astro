@@ -1,0 +1,8 @@
+---
+import { getCollection } from "astro:content";
+import EventListing from "../../../editions/2026/components/EventListing.astro";
+
+const events = (await getCollection("events2026")).sort((a, b) => a.data.date.localeCompare(b.data.date));
+---
+
+<EventListing {events} />
