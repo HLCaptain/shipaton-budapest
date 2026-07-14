@@ -47,19 +47,44 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
     </header>
     <slot />
     <footer class="site-footer">
-      <div>
-        <p>Shipaton Budapest · community-led · 2026</p>
+      <div class="site-footer__grid">
+        <section class="site-footer__brand" aria-labelledby="footer-brand-title">
+          <p class="site-footer__kicker">Shipaton Budapest · 2026</p>
+          <h2 id="footer-brand-title">Build locally.<br />Ship globally.</h2>
+          <p>Four community-led stops for turning a small idea into an app people can actually use.</p>
+        </section>
+
+        <nav aria-labelledby="footer-explore-title">
+          <h2 id="footer-explore-title">Explore</h2>
+          <a href="/">Home</a>
+          <a href="/events/">All events</a>
+          <a href="/events/budapest-kickoff/">Budapest kickoff</a>
+        </nav>
+
+        <nav aria-labelledby="footer-shipaton-title">
+          <h2 id="footer-shipaton-title">Shipaton</h2>
+          <a href="https://www.shipaton.com/" rel="noreferrer">Official site <span aria-hidden="true">↗</span></a>
+          <a href="https://www.shipaton.com/events" rel="noreferrer">IRL events <span aria-hidden="true">↗</span></a>
+          <a href="https://revenuecat-shipaton-2026.devpost.com/" rel="noreferrer">Join on Devpost <span aria-hidden="true">↗</span></a>
+          <a href="https://www.shipaton.com/media-kit" rel="noreferrer">Media kit <span aria-hidden="true">↗</span></a>
+        </nav>
+
+        <nav aria-labelledby="footer-organizer-title">
+          <h2 id="footer-organizer-title">Organizer</h2>
+          <a href="https://github.com/HLCaptain" rel="noreferrer">Organizer on GitHub <span aria-hidden="true">↗</span></a>
+          <a href="https://x.com/hlcaptain" rel="noreferrer">@hlcaptain on X <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+
+      <div class="site-footer__bottom">
+        <p>Community-led in Budapest · August—September 2026</p>
         <p>
-          <a href="/brand/shipaton-wordmark.svg">Shipaton wordmark</a>,
-          <a href="/brand/rocket-launch-wide.svg">Shippy rocket artwork</a>, and
-          <a href="/brand/shippy-pixel-head.png">Shippy icon</a> from RevenueCat’s official media kit.
+          Official media-kit assets:{" "}
+          <a href="/brand/shipaton-wordmark.svg">wordmark</a>,{" "}
+          <a href="/brand/rocket-launch-wide.svg">rocket artwork</a>, and{" "}
+          <a href="/brand/shippy-pixel-head.png">Shippy icon</a>.
         </p>
       </div>
-      <nav aria-label="Credits and contact">
-        <a href="https://www.shipaton.com/media-kit" rel="noreferrer">Media kit <span aria-hidden="true">↗</span></a>
-        <a href="https://github.com/HLCaptain" rel="noreferrer">Organizer on GitHub <span aria-hidden="true">↗</span></a>
-        <a href="https://x.com/hlcaptain" rel="noreferrer">@hlcaptain on X <span aria-hidden="true">↗</span></a>
-      </nav>
     </footer>
   </body>
 </html>

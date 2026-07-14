@@ -15,8 +15,9 @@ type Props = {
 };
 
 const { event } = Astro.props;
-const { Content } = await render(event);
+const { Content, headings } = await render(event);
 const speakers = event.data.speakers ?? [];
+const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const date = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -27,7 +28,10 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
 <BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
   <main class="event-document" id="main-content">
-    <a class="button button--quiet event-document__back" href="/events/">← All events</a>
+    <a class="event-document__back" href="/events/">
+      <span class="event-document__back-icon" aria-hidden="true">←</span>
+      <span>All events</span>
+    </a>
 
     <header class="event-document__header">
       <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
@@ -84,10 +88,11 @@ const date = new Intl.DateTimeFormat("en-GB", {
         <p class="eyebrow"><span aria-hidden="true"></span> Run of show</p>
         <h2 id="schedule-title">Schedule</h2>
       </div>
-      <ol>
-        {event.data.schedule.map((item) => (
+      <ol role="list">
+        {event.data.schedule.map((item, index) => (
           <li>
-            <time>{item.time}</time>
+            <span class="event-schedule__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <span class="event-schedule__time">{item.time}</span>
             <div>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
@@ -114,10 +119,36 @@ const date = new Intl.DateTimeFormat("en-GB", {
       </section>
     )}
 
-    <article class="event-document__body" aria-label="About this event">
-      <Content />
-    </article>
+    <section class="event-about" aria-labelledby="about-title">
+      <div class="event-section-heading">
+        <p class="eyebrow"><span aria-hidden="true"></span> Know before you go</p>
+        <h2 id="about-title">About this event</h2>
+      </div>
+      <div class="event-about__layout">
+        {contentHeadings.length > 0 && (
+          <nav class="event-document__toc" aria-label="On this page">
+            <p>On this page</p>
+            <ol>
+              {contentHeadings.map((heading) => (
+                <li data-depth={heading.depth}>
+                  <a href={`#${heading.slug}`}>{heading.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+        <article class="event-document__body">
+          <Content />
+        </article>
+      </div>
+      <p class="visually-hidden" role="status" aria-live="polite" data-heading-copy-status></p>
+    </section>
 
-    <a class="button button--quiet event-document__end-link" href="/events/">← Back to all events</a>
+    <a class="event-document__end-link" href="/events/">
+      <span class="event-document__back-icon" aria-hidden="true">←</span>
+      <span>Back to all events</span>
+    </a>
   </main>
+
+  <script is:inline src="/scripts/event-document.js" defer></script>
 </BaseLayout>

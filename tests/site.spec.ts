@@ -105,6 +105,11 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-document__facts")).toContainText("Local registration opens soon");
   await expect(page.getByRole("link", { name: /official listing/ })).toHaveAttribute("href", "https://www.shipaton.com/events");
   await expect(page.locator(".event-schedule > ol > li")).toHaveCount(4);
+  await expect(page.locator(".event-schedule__index")).toHaveText(["01", "02", "03", "04"]);
+  await expect(page.locator(".event-schedule__time")).toHaveText(["Check-in", "Clinics", "Test pass", "Wrap-up"]);
+  await expect(page.locator(".event-schedule > ol")).not.toHaveCSS("gap", "normal");
+  await expect(page.getByRole("link", { name: "All events", exact: true }).first()).not.toHaveClass(/button/);
+  await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
   await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
 
   await page.getByRole("link", { name: "Back to all events" }).click();
@@ -121,19 +126,55 @@ test("keeps Budapest beside the brand and exposes organizer credits", async ({ p
   await expect(page.getByRole("link", { name: /@hlcaptain on X/ })).toHaveAttribute("href", "https://x.com/hlcaptain");
 });
 
-test("uses a full-width dark footer", async ({ page }) => {
+test("uses a responsive multi-column dark footer with readable type", async ({ page }) => {
   await page.goto("/");
 
   const treatment = await page.locator(".site-footer").evaluate((footer) => {
+    const grid = footer.querySelector<HTMLElement>(".site-footer__grid")!;
+    const link = footer.querySelector<HTMLElement>("nav a")!;
     return {
       background: getComputedStyle(footer).backgroundColor,
+      columns: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+      fontSize: Number.parseFloat(getComputedStyle(link).fontSize),
+      scrollWidth: footer.scrollWidth,
       width: footer.getBoundingClientRect().width,
       viewportWidth: window.innerWidth
     };
   });
 
   expect(treatment.background).toBe("rgb(23, 19, 38)");
+  expect(treatment.columns).toBe(treatment.viewportWidth <= 360 ? 1 : treatment.viewportWidth <= 940 ? 2 : 4);
+  expect(treatment.fontSize).toBeGreaterThanOrEqual(14);
+  expect(treatment.scrollWidth).toBeLessThanOrEqual(treatment.viewportWidth);
   expect(treatment.width).toBe(treatment.viewportWidth);
+  await expect(page.locator(".site-footer nav")).toHaveCount(3);
+});
+
+test("deep-links to Markdown headings and copies their references", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          document.documentElement.dataset.copiedHeadingLink = value;
+        }
+      }
+    });
+  });
+
+  await page.goto("/events/ship-clinic/#goals");
+
+  const heading = page.getByRole("heading", { name: "Goals", exact: true });
+  await expect(page).toHaveURL(/\/events\/ship-clinic\/#goals$/);
+  await expect(heading).toHaveAttribute("id", "goals");
+  await expect(heading).toBeInViewport();
+  const copy = page.locator(".event-document__heading-row").filter({ has: heading }).getByRole("button");
+  await expect(copy).toHaveAccessibleName("Copy link to Goals");
+  await copy.click();
+
+  await expect(copy).toHaveAttribute("data-state", "copied");
+  await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to Goals.");
+  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/events\/ship-clinic\/#goals$/);
 });
 
 test("selects and extrudes every event without changing its layout footprint", async ({ page }) => {
@@ -351,7 +392,9 @@ test("outlines neighboring events and gives clickable backdrops the right hover 
     expect(after.offsetWidth).toBe(before.offsetWidth);
   }
 
-  await expect(heroCaption).toHaveCSS("background-color", "rgb(255, 129, 0)");
+  await expect(page.locator(".hero__art")).toHaveCSS("border-color", "rgb(255, 129, 0)");
+  await expect(heroCaption).toHaveCSS("background-color", "rgb(23, 19, 38)");
+  await expect(heroCaption.locator("[data-featured-title]")).toHaveCSS("color", "rgb(255, 129, 0)");
 
   const primary = page.getByRole("link", { name: "Explore the dates" });
   await page.mouse.move(0, 0);
