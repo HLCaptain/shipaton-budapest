@@ -436,6 +436,7 @@ svg {
   border-color: var(--orange);
   box-shadow: var(--extrusion-shadow);
   opacity: 1;
+  scroll-margin-inline-start: calc(2 * var(--extrusion-factor));
   translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
   transform: scale(1);
 }

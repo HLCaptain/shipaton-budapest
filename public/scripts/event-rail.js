@@ -18,6 +18,8 @@ if (browser && track && cards.length && counter) {
   let centerTarget = null;
   let scrollFrame = 0;
 
+  const restoreSnapping = () => track.style.removeProperty("scroll-snap-type");
+
   cards.forEach((card) => {
     const date = card.dataset.date ?? "";
     const state = date < today ? "Past" : date === today ? "Today" : "Upcoming";
@@ -27,7 +29,8 @@ if (browser && track && cards.length && counter) {
   });
 
   const centerCard = (card, smooth) => {
-    const left = card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2;
+    const scrollMargin = parseFloat(getComputedStyle(card).scrollMarginInlineStart) || 0;
+    const left = card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2 - scrollMargin / 2;
     centerTarget = smooth && !reducedMotion
       ? Math.max(0, Math.min(left, track.scrollWidth - track.clientWidth))
       : null;
@@ -36,7 +39,10 @@ if (browser && track && cards.length && counter) {
 
   const selectCard = (index, scroll = false) => {
     const nextIndex = Math.max(0, Math.min(cards.length - 1, index));
-    if (activeIndex === nextIndex) return;
+    if (activeIndex === nextIndex) {
+      if (scroll) centerCard(cards[nextIndex], true);
+      return;
+    }
     activeIndex = nextIndex;
     cards.forEach((card, cardIndex) => {
       const selected = cardIndex === activeIndex;
@@ -61,14 +67,26 @@ if (browser && track && cards.length && counter) {
   });
 
   cards.forEach((card, index) => {
-    card.addEventListener("focusin", () => selectCard(index, true));
+    card.addEventListener("focusin", (event) => {
+      if (event.target.matches(":focus-visible")) selectCard(index, true);
+    });
     card.addEventListener("click", (event) => {
-      if (!event.target.closest("a")) selectCard(index, true);
+      if (event.target.closest("a")) restoreSnapping();
+      else selectCard(index, true);
     });
   });
 
+  const pauseCentering = () => {
+    track.style.scrollSnapType = "none";
+    if (centerTarget === null) return;
+    const left = track.scrollLeft;
+    centerTarget = null;
+    track.scrollTo({ left, behavior: "auto" });
+  };
   const cancelCentering = () => { centerTarget = null; };
-  track.addEventListener("pointerdown", cancelCentering, { passive: true });
+  track.addEventListener("pointerdown", pauseCentering, { capture: true, passive: true });
+  window.addEventListener("pointerup", () => window.setTimeout(restoreSnapping), { passive: true });
+  window.addEventListener("pointercancel", restoreSnapping, { passive: true });
   track.addEventListener("wheel", cancelCentering, { passive: true });
   track.addEventListener("keydown", cancelCentering);
 

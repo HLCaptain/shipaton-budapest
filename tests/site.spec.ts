@@ -138,6 +138,8 @@ test("keeps mouse selection stable while smoothly centering", async ({ page }, t
   const track = page.locator("[data-event-track]");
   await page.locator("#events").scrollIntoViewIfNeeded();
   await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  const initialScroll = await track.evaluate((element) => element.scrollLeft);
+  const initialPageScroll = await page.evaluate(() => window.scrollY);
   await page.evaluate(() => {
     const rail = document.querySelector<HTMLElement>("[data-event-track]")!;
     const cards = [...document.querySelectorAll<HTMLElement>("[data-event-card]")];
@@ -161,14 +163,21 @@ test("keeps mouse selection stable while smoothly centering", async ({ page }, t
   const card = page.locator('[data-event-card][data-date="2026-09-12"]');
   const box = await card.boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.click(box!.x + 8, box!.y + 80);
+  await page.mouse.move(box!.x + 8, box!.y + 80);
+  await page.mouse.down();
+  await page.waitForTimeout(120);
+  expect(await track.evaluate((element) => element.scrollLeft)).toBe(initialScroll);
+  await expect(card).not.toHaveAttribute("aria-current", "date");
+  await page.mouse.up();
 
   await expect(card).toHaveAttribute("aria-current", "date");
   await expect.poll(() => card.evaluate((element) => {
     const rail = element.parentElement;
-    const left = (element as HTMLElement).offsetLeft - (rail!.clientWidth - (element as HTMLElement).offsetWidth) / 2;
-    return Math.abs(rail!.scrollLeft - left);
+    const cardRect = element.getBoundingClientRect();
+    const railRect = rail!.getBoundingClientRect();
+    return Math.abs(cardRect.left + cardRect.width / 2 - railRect.left - rail!.clientWidth / 2);
   })).toBeLessThan(2);
+  expect(await page.evaluate(() => window.scrollY)).toBe(initialPageScroll);
   const trace = await page.evaluate(() => ({
     scroll: JSON.parse(document.documentElement.dataset.scrollTrace ?? "[]"),
     selections: JSON.parse(document.documentElement.dataset.selectionTrace ?? "[]")
@@ -176,6 +185,59 @@ test("keeps mouse selection stable while smoothly centering", async ({ page }, t
 
   expect(trace.selections).toEqual(["2026-09-12"]);
   expect(new Set(trace.scroll).size).toBeGreaterThan(3);
+});
+
+test("freezes an in-flight transition under the pointer", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
+  await page.goto("/");
+
+  const track = page.locator("[data-event-track]");
+  await page.locator("#events").scrollIntoViewIfNeeded();
+  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const rail = document.querySelector<HTMLElement>("[data-event-track]")!;
+    const cards = [...document.querySelectorAll<HTMLElement>("[data-event-card]")];
+    const selections: string[] = [];
+    new MutationObserver(() => {
+      selections.push(cards.find((card) => card.hasAttribute("data-selected"))?.dataset.date ?? "");
+      document.documentElement.dataset.selectionTrace = JSON.stringify(selections);
+    }).observe(rail, { attributes: true, attributeFilter: ["data-selected"], subtree: true });
+  });
+
+  const third = page.locator('[data-event-card][data-date="2026-09-12"]');
+  const thirdBox = await third.boundingBox();
+  expect(thirdBox).not.toBeNull();
+  await page.mouse.click(thirdBox!.x + 8, thirdBox!.y + 80);
+  await expect(third).toHaveAttribute("aria-current", "date");
+  await expect.poll(
+    () => track.evaluate((element) => element.scrollLeft),
+    { intervals: [16], timeout: 2_000 }
+  ).toBeGreaterThan(1_140);
+
+  const fourth = page.locator('[data-event-card][data-date="2026-09-30"]');
+  const fourthBox = await fourth.boundingBox();
+  expect(fourthBox).not.toBeNull();
+  await page.mouse.move(fourthBox!.x + 8, fourthBox!.y + 80);
+  await page.mouse.down();
+  const pressedScroll = await track.evaluate((element) => element.scrollLeft);
+  await page.waitForTimeout(120);
+
+  expect(await track.evaluate((element) => element.scrollLeft)).toBe(pressedScroll);
+  await expect(third).toHaveAttribute("aria-current", "date");
+  await page.mouse.up();
+
+  expect(Math.abs(await track.evaluate((element) => element.scrollLeft) - pressedScroll)).toBeLessThan(50);
+  await expect(fourth).toHaveAttribute("aria-current", "date");
+  await expect.poll(() => fourth.evaluate((element) => {
+    const rail = element.parentElement;
+    const cardRect = element.getBoundingClientRect();
+    const railRect = rail!.getBoundingClientRect();
+    return Math.abs(cardRect.left + cardRect.width / 2 - railRect.left - rail!.clientWidth / 2);
+  })).toBeLessThan(2);
+  expect(JSON.parse(await page.locator("html").getAttribute("data-selection-trace") ?? "[]")).toEqual([
+    "2026-09-12",
+    "2026-09-30"
+  ]);
 });
 
 test("outlines neighboring events and extrudes backdrop cards only on hover", async ({ page }, testInfo) => {
