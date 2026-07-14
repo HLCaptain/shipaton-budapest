@@ -5,7 +5,7 @@ const initEventRail = () => {
   const counter = browser?.querySelector("[data-event-counter]");
   const buttons = Array.from(browser?.querySelectorAll("[data-event-direction]") ?? []);
 
-  if (!browser || !track || !cards.length || !counter || browser.dataset.eventRailBound) return;
+  if (!browser || !track || !cards.length || browser.dataset.eventRailBound) return;
   browser.dataset.eventRailBound = "true";
 
   const controller = new AbortController();
@@ -66,7 +66,7 @@ const initEventRail = () => {
       if (selected) card.setAttribute("aria-current", "date");
       else card.removeAttribute("aria-current");
     });
-    counter.value = `${activeIndex + 1} / ${cards.length}`;
+    if (counter) counter.value = `${activeIndex + 1} / ${cards.length}`;
     buttons.forEach((button) => {
       const direction = Number(button.dataset.eventDirection);
       button.disabled = direction < 0 ? activeIndex === 0 : activeIndex === cards.length - 1;

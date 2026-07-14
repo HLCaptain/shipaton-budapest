@@ -575,6 +575,10 @@ svg {
   transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease, translate 180ms ease;
 }
 
+.event-card:only-child {
+  cursor: default;
+}
+
 .event-card[data-selected] {
   border-color: var(--orange);
   box-shadow: var(--extrusion-shadow);
@@ -849,6 +853,12 @@ a.event-card__soon:hover {
 
 .event-grid > li {
   min-width: 0;
+}
+
+.event-grid > li:only-child {
+  width: min(100%, 52rem);
+  grid-column: 1 / -1;
+  justify-self: center;
 }
 
 .event-grid-card {
@@ -1575,6 +1585,12 @@ a.event-card__soon:hover {
   .site-footer__brand {
     max-width: 36rem;
     grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 621px) and (max-width: 940px) {
+  .event-grid > li:only-child .event-grid-card__speakers {
+    display: block;
   }
 }
 

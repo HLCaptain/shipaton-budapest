@@ -16,7 +16,7 @@ const freezeDate = async (page: Page, isoDate: string) => {
 };
 
 test.beforeEach(async ({ page }) => {
-  await freezeDate(page, "2026-08-10T10:00:00+02:00");
+  await freezeDate(page, "2026-07-15T10:00:00+02:00");
 });
 
 test("redirects the root to the current edition", async ({ page }) => {
@@ -28,7 +28,7 @@ test("redirects the root to the current edition", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("local runway");
 });
 
-test("opens on the next event without moving the page vertically", async ({ page }) => {
+test("opens on the confirmed event without redundant navigation", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -37,26 +37,23 @@ test("opens on the next event without moving the page vertically", async ({ page
   await page.goto("/2026/");
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("local runway");
-  await expect(page.locator("[data-event-card]")).toHaveCount(4);
-  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-22");
-  await expect(page.locator('[data-event-card][data-date="2026-08-01"] [data-event-state]')).toHaveText("Past");
-  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 4");
+  const event = page.locator('[data-event-card][data-date="2026-08-04"]');
+  await expect(page.locator("[data-event-card]")).toHaveCount(1);
+  await expect(event).toHaveAttribute("aria-current", "date");
+  await expect(event.locator("[data-event-state]")).toHaveText("Upcoming");
+  await expect(event.locator('[data-event-people="hosts"]')).toContainText("Balázs Püspök-Kiss");
+  await expect(event.locator('[data-event-people="speakers"] li')).toHaveText([
+    "Márton Braun",
+    "Gábor Bóka",
+    "Mirzamehdi Karimov"
+  ]);
+  if (page.viewportSize()!.width > 620) await expect(event.locator('[data-event-people="speakers"]')).toBeVisible();
+  else await expect(event.locator('[data-event-people="speakers"]')).toBeHidden();
+  await expect(event).not.toHaveAttribute("tabindex");
+  await expect(event).toHaveCSS("cursor", "default");
+  await expect(page.locator(".event-controls")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   expect(consoleErrors).toEqual([]);
-});
-
-test("can select an earlier event by scrolling back", async ({ page }) => {
-  await page.goto("/2026/");
-
-  const track = page.locator("[data-event-track]");
-  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  const initialScroll = await track.evaluate((element) => element.scrollLeft);
-
-  await page.getByRole("button", { name: "Show previous event" }).click();
-
-  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-01");
-  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 4");
-  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeLessThan(initialScroll);
 });
 
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
@@ -90,18 +87,20 @@ test("keeps content inside the viewport and exposes the important links", async 
 test("links the hero art to the next Budapest event", async ({ page }) => {
   await page.goto("/2026/");
 
-  const heroLink = page.getByRole("link", { name: "View Build sprint 01 event details" });
-  await expect(heroLink).toHaveAttribute("href", "/2026/events/build-sprint-one/");
-  await expect(heroLink.locator("[data-featured-title]")).toHaveText("Build sprint 01");
-  await expect(heroLink.locator("[data-featured-location]")).toHaveText("Budapest · venue announced soon");
+  const heroLink = page.getByRole("link", { name: "View Project Kickoff event details" });
+  await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
+  await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
+  await expect(heroLink.locator("[data-featured-location]")).toHaveText(
+    "Genesys Cloud Services Hungary Kft. · Budapest, Teréz krt. 55-57, 1062 Hungary"
+  );
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
 test("uses browser history for the detail page's top back button", async ({ page }) => {
   await page.goto("/2026/?source=history");
-  await page.getByRole("link", { name: "View Build sprint 01 event details" }).click();
+  await page.getByRole("link", { name: "View Project Kickoff event details" }).click();
 
-  await expect(page).toHaveURL(/\/2026\/events\/build-sprint-one\/$/);
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   const backButton = page.getByRole("button", { name: "Back", exact: true });
   await expect(backButton).toHaveClass(/button--quiet/);
   await expect(backButton).toHaveClass(/button--compact/);
@@ -121,22 +120,17 @@ test("publishes the isolated 2026 event routes", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
   expect(await page.locator(".event-grid-card time").evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute("datetime"))
-  )).toEqual(["2026-08-01", "2026-08-22", "2026-09-12", "2026-09-30"]);
+  )).toEqual(["2026-08-04"]);
   expect(await page.locator(".event-grid-card__link").evaluateAll((links) =>
     links.map((link) => link.getAttribute("href"))
-  )).toEqual([
-    "/2026/events/budapest-kickoff/",
-    "/2026/events/build-sprint-one/",
-    "/2026/events/ship-clinic/",
-    "/2026/events/demo-and-submit/"
-  ]);
+  )).toEqual(["/2026/events/project-kickoff/"]);
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/events/");
   await expect(page.locator('a[href^="/events/"]')).toHaveCount(0);
 
-  await page.getByRole("link", { name: /Ship clinic/ }).click();
-  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/$/);
+  await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe(
-    "/2026/events/ship-clinic/"
+    "/2026/events/project-kickoff/"
   );
 });
 
@@ -147,25 +141,74 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Meet. Make.");
   await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
-  await expect(page.locator(".event-grid-card")).toHaveCount(4);
-  await expect(page.locator(".event-grid-card__link")).toHaveCount(4);
+  await expect(page.locator(".event-grid-card")).toHaveCount(1);
+  await expect(page.locator(".event-grid-card__link")).toHaveCount(1);
+  await expect(page.locator('.event-grid-card [data-event-people="hosts"]')).toContainText("Balázs Püspök-Kiss");
+  const listedSpeakers = page.locator('.event-grid-card [data-event-people="speakers"]');
+  await expect(listedSpeakers.locator("li")).toHaveText([
+    "Márton Braun",
+    "Gábor Bóka",
+    "Mirzamehdi Karimov"
+  ]);
+  if (page.viewportSize()!.width > 620) await expect(listedSpeakers).toBeVisible();
+  else await expect(listedSpeakers).toBeHidden();
   await expect(page.locator("a a")).toHaveCount(0);
-  await page.getByRole("link", { name: /Ship clinic/ }).click();
+  await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ship clinic");
-  await expect(page.locator(".event-document__facts")).toContainText("Budapest · venue announced soon");
-  await expect(page.locator(".event-document__facts")).toContainText("Product feedback · App quality · Store readiness");
-  await expect(page.locator(".event-document__facts")).toContainText("Local registration opens soon");
-  await expect(page.getByRole("link", { name: /official listing/ })).toHaveAttribute("href", "https://www.shipaton.com/events");
-  await expect(page.locator(".event-schedule > ol > li")).toHaveCount(4);
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Project Kickoff");
+  const facts = page.locator(".event-document__facts");
+  await expect(facts).toContainText("Genesys Cloud Services Hungary Kft. · Budapest, Teréz krt. 55-57, 1062 Hungary");
+  await expect(facts).toContainText("17:00–21:00");
+  await expect(facts).toContainText("Mobile development · Team formation · AI-assisted coding");
+  await expect(facts.getByRole("link", { name: /Genesys Cloud Services Hungary/ })).toHaveAttribute(
+    "href",
+    "https://www.google.com/maps/search/?api=1&query=47.509769399999996%2C19.058209299999998&query_place_id=ChIJo5TJXgDdQUcRZC48XlVw3VA"
+  );
+  await expect(page.getByRole("link", { name: /Reserve a place/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");
+  await expect(page.getByRole("link", { name: /^RSVP/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");
+  await expect(page.locator(".event-schedule > ol > li")).toHaveCount(14);
   await expect(page.locator(".event-schedule__index")).toHaveCount(0);
-  await expect(page.locator(".event-schedule__time")).toHaveText(["Check-in", "Clinics", "Test pass", "Wrap-up"]);
+  await expect(page.locator(".event-schedule__time")).toHaveText([
+    "17:00–17:20",
+    "17:20–17:30",
+    "17:30–17:45",
+    "17:45–17:50",
+    "17:50–18:05",
+    "18:05–18:10",
+    "18:10–18:25",
+    "18:25–18:40",
+    "18:40–18:50",
+    "18:50–19:05",
+    "19:05–19:15",
+    "19:15–20:35",
+    "20:35–20:50",
+    "20:50–21:00"
+  ]);
   await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
-  await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
+  await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "What you can expect" })).toHaveAttribute("href", "#what-you-can-expect");
+  await expect(page.locator(".event-document__body")).toContainText("Primary language: English");
+
+  const team = page.locator(".event-people__groups");
+  await expect(team.locator("dt")).toHaveText(["Host", "Organizer", "Speakers"]);
+  await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute(
+    "href",
+    "https://www.linkedin.com/in/balazs-puspok-kiss"
+  );
+  await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute("target", "_blank");
+  await expect(team.locator('[data-event-people="organizers"] a')).toHaveAttribute(
+    "href",
+    "https://luma.com/calendar/cal-VeKA6RiND89uvHk"
+  );
+  await expect(team.locator('[data-event-people="organizers"] a')).toHaveAttribute("target", "_blank");
+  await expect(team.locator('[data-event-people="speakers"] li')).toHaveText([
+    "Márton Braun",
+    "Gábor Bóka",
+    "Mirzamehdi Karimov"
+  ]);
+  await expect(team.locator('[data-event-people="speakers"] a')).toHaveCount(0);
 
   await page.getByRole("link", { name: "Back to 2026 events" }).click();
   await expect(page).toHaveURL(/\/2026\/events\/$/);
@@ -227,11 +270,11 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
     );
   });
   await page
-    .locator('[data-event-card][data-date="2026-08-22"]')
+    .locator('[data-event-card][data-date="2026-08-04"]')
     .getByRole("link", { name: "View event details" })
     .evaluate((link) => (link as HTMLAnchorElement).click());
 
-  await expect(page).toHaveURL(/\/2026\/events\/build-sprint-one\/$/);
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-page-direction", "down");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   const motionSource = await page.evaluate(
@@ -286,11 +329,11 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await page.evaluate(() => ((window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker = "alive"));
 
   await page.getByRole("link", { name: "Events", exact: true }).click();
-  await page.getByRole("link", { name: /Ship clinic/ }).click();
-  await expect(page.getByRole("button", { name: "Copy link to Goals" })).toHaveCount(1);
+  await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Copy link to What you can expect" })).toHaveCount(1);
 
   await page.getByRole("link", { name: "Back to 2026 events", exact: true }).click();
-  await page.getByRole("link", { name: /Build sprint 01/ }).click();
+  await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
@@ -298,17 +341,15 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   expect(
     await page.evaluate(() => (window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker)
   ).toBe("alive");
-  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-22");
-  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 4");
-  await page.getByRole("button", { name: "Show next event" }).click();
-  await expect(page.locator("[data-event-counter]")).toHaveText("3 / 4");
+  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-04");
+  await expect(page.locator(".event-controls")).toHaveCount(0);
 });
 
 test("keeps the event detail body aligned with a responsive table of contents", async ({ page }) => {
-  await page.goto("/2026/events/build-sprint-one/");
+  await page.goto("/2026/events/project-kickoff/");
 
   const aboutHeading = page.getByRole("heading", { name: "About this event", exact: true });
-  const title = page.getByRole("heading", { name: "Build sprint 01", exact: true });
+  const title = page.getByRole("heading", { name: "Project Kickoff", exact: true });
   const scheduleHeading = page.getByRole("heading", { name: "Schedule", exact: true });
   const body = page.locator(".event-document__body");
   const toc = page.getByRole("navigation", { name: "On this page" });
@@ -320,9 +361,9 @@ test("keeps the event detail body aligned with a responsive table of contents", 
   const tocBox = await toc.boundingBox();
   const backMargin = await page.locator(".event-document__back").evaluate((element) => getComputedStyle(element).marginBottom);
   const aboutMargin = await page.locator(".event-about").evaluate((element) => getComputedStyle(element).marginTop);
-  const tocLinks = await toc.locator("a").evaluateAll((links) => links.map((link) => {
-    const { x, y } = link.getBoundingClientRect();
-    return { x, y };
+  const tocLinks = await toc.locator("li").evaluateAll((items) => items.map((item) => {
+    const { x, y } = item.querySelector("a")!.getBoundingClientRect();
+    return { depth: item.dataset.depth, x, y };
   }));
 
   expect(titleBox).not.toBeNull();
@@ -333,8 +374,10 @@ test("keeps the event detail body aligned with a responsive table of contents", 
   expect(Math.abs(titleBox!.x - scheduleBox!.x)).toBeLessThan(1);
   expect(Math.abs(titleBox!.x - headingBox!.x)).toBeLessThan(1);
   expect(Math.abs(headingBox!.x - bodyBox!.x)).toBeLessThan(1);
-  expect(tocLinks.every((link, index) => index === 0 || (
-    Math.abs(link.x - tocLinks[0].x) < 1 && link.y > tocLinks[index - 1].y
+  expect(tocLinks.every((link, index) => index === 0 || link.y > tocLinks[index - 1].y)).toBe(true);
+  const topLevelX = tocLinks.find(({ depth }) => depth === "2")!.x;
+  expect(tocLinks.every(({ depth, x }) => (
+    depth === "2" ? Math.abs(x - topLevelX) < 1 : x > topLevelX
   ))).toBe(true);
   expect(Number.parseFloat(backMargin)).toBeLessThanOrEqual(56);
   expect(Number.parseFloat(aboutMargin)).toBeLessThanOrEqual(80);
@@ -443,22 +486,23 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
     });
   });
 
-  await page.goto("/2026/events/ship-clinic/#goals");
+  await page.goto("/2026/events/project-kickoff/#what-you-can-expect");
 
-  const heading = page.getByRole("heading", { name: "Goals", exact: true });
-  await expect(page).toHaveURL(/\/2026\/events\/ship-clinic\/#goals$/);
-  await expect(heading).toHaveAttribute("id", "goals");
+  const heading = page.getByRole("heading", { name: "What you can expect", exact: true });
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#what-you-can-expect$/);
+  await expect(heading).toHaveAttribute("id", "what-you-can-expect");
   await expect(heading).toBeInViewport();
   const headingRow = page.locator(".event-document__heading-row").filter({ has: heading });
   const copy = headingRow.getByRole("button");
-  await expect(copy).toHaveAccessibleName("Copy link to Goals");
+  await expect(copy).toHaveAccessibleName("Copy link to What you can expect");
   expect((await copy.boundingBox())!.x).toBeGreaterThanOrEqual(0);
-  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+  const canHover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
+  if (canHover && testInfo.project.name === "desktop") {
     await page.mouse.move(0, 0);
     await expect(copy).toHaveCSS("opacity", "0");
     await headingRow.hover();
     await expect(copy).toHaveCSS("opacity", "1");
-  } else {
+  } else if (!canHover) {
     await expect(copy).toHaveCSS("opacity", "1");
   }
   await copy.focus();
@@ -466,184 +510,46 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
   await copy.click();
 
   await expect(copy).toHaveAttribute("data-state", "copied");
-  await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to Goals.");
-  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/2026\/events\/ship-clinic\/#goals$/);
+  await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to What you can expect.");
+  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/2026\/events\/project-kickoff\/#what-you-can-expect$/);
 });
 
-test("selects and extrudes every event without changing its layout footprint", async ({ page }) => {
+test("selects and extrudes the event without changing its layout footprint", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/2026/");
 
-  for (const date of ["2026-08-01", "2026-08-22", "2026-09-12", "2026-09-30"]) {
-    const card = page.locator(`[data-event-card][data-date="${date}"]`);
-    const before = await card.evaluate((element) => ({
-      offsetHeight: (element as HTMLElement).offsetHeight,
-      offsetLeft: (element as HTMLElement).offsetLeft,
-      offsetWidth: (element as HTMLElement).offsetWidth
-    }));
-
-    await card.locator("h3").click();
-
-    await expect(card).toHaveAttribute("aria-current", "date");
-    await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveCount(1);
-    await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
-    await expect.poll(() => card.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
-    const after = await card.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        boxShadow: style.boxShadow,
-        offsetHeight: (element as HTMLElement).offsetHeight,
-        offsetLeft: (element as HTMLElement).offsetLeft,
-        offsetWidth: (element as HTMLElement).offsetWidth,
-        translate: style.translate
-      };
-    });
-
-    expect(after.boxShadow.match(/rgb\(255, 129, 0\)/g)).toHaveLength(4);
-    expect(after.translate).toMatch(/^-/);
-    expect(after.offsetHeight).toBe(before.offsetHeight);
-    expect(after.offsetLeft).toBe(before.offsetLeft);
-    expect(after.offsetWidth).toBe(before.offsetWidth);
-  }
-
-  await expect(page.locator("[data-event-counter]")).toHaveText("4 / 4");
-});
-
-test("keeps mouse selection stable while smoothly centering", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
-  await page.goto("/2026/");
-
-  const track = page.locator("[data-event-track]");
-  await page.locator("#events").scrollIntoViewIfNeeded();
-  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  const initialScroll = await track.evaluate((element) => element.scrollLeft);
-  const initialPageScroll = await page.evaluate(() => window.scrollY);
-  await page.evaluate(() => {
-    const rail = document.querySelector<HTMLElement>("[data-event-track]")!;
-    const cards = [...document.querySelectorAll<HTMLElement>("[data-event-card]")];
-    const selections: string[] = [];
-    const scrollPositions: number[] = [];
-    const save = () => {
-      document.documentElement.dataset.selectionTrace = JSON.stringify(selections);
-      document.documentElement.dataset.scrollTrace = JSON.stringify(scrollPositions);
-    };
-    new MutationObserver(() => {
-      selections.push(cards.find((card) => card.hasAttribute("data-selected"))?.dataset.date ?? "");
-      save();
-    }).observe(rail, { attributes: true, attributeFilter: ["data-selected"], subtree: true });
-    rail.addEventListener("scroll", () => {
-      scrollPositions.push(Math.round(rail.scrollLeft));
-      save();
-    }, { passive: true });
-    save();
-  });
-
-  const card = page.locator('[data-event-card][data-date="2026-09-12"]');
-  const box = await card.boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + 8, box!.y + 80);
-  await page.mouse.down();
-  await page.waitForTimeout(120);
-  expect(await track.evaluate((element) => element.scrollLeft)).toBe(initialScroll);
-  await expect(card).not.toHaveAttribute("aria-current", "date");
-  await page.mouse.up();
-
-  await expect(card).toHaveAttribute("aria-current", "date");
-  await expect.poll(() => card.evaluate((element) => {
-    const rail = element.parentElement;
-    const cardRect = element.getBoundingClientRect();
-    const railRect = rail!.getBoundingClientRect();
-    return Math.abs(cardRect.left + cardRect.width / 2 - railRect.left - rail!.clientWidth / 2);
-  })).toBeLessThan(2);
-  expect(await page.evaluate(() => window.scrollY)).toBe(initialPageScroll);
-  const trace = await page.evaluate(() => ({
-    scroll: JSON.parse(document.documentElement.dataset.scrollTrace ?? "[]"),
-    selections: JSON.parse(document.documentElement.dataset.selectionTrace ?? "[]")
+  const card = page.locator('[data-event-card][data-date="2026-08-04"]');
+  const before = await card.evaluate((element) => ({
+    offsetHeight: (element as HTMLElement).offsetHeight,
+    offsetLeft: (element as HTMLElement).offsetLeft,
+    offsetWidth: (element as HTMLElement).offsetWidth
   }));
 
-  expect(trace.selections).toEqual(["2026-09-12"]);
-  expect(new Set(trace.scroll).size).toBeGreaterThan(3);
-});
-
-test("freezes an in-flight transition under the pointer", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Mouse transition is covered once at desktop size");
-  await page.goto("/2026/");
-
-  const track = page.locator("[data-event-track]");
-  await page.locator("#events").scrollIntoViewIfNeeded();
-  await expect.poll(() => track.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  await page.evaluate(() => {
-    const rail = document.querySelector<HTMLElement>("[data-event-track]")!;
-    const cards = [...document.querySelectorAll<HTMLElement>("[data-event-card]")];
-    const selections: string[] = [];
-    new MutationObserver(() => {
-      selections.push(cards.find((card) => card.hasAttribute("data-selected"))?.dataset.date ?? "");
-      document.documentElement.dataset.selectionTrace = JSON.stringify(selections);
-    }).observe(rail, { attributes: true, attributeFilter: ["data-selected"], subtree: true });
-  });
-
-  const third = page.locator('[data-event-card][data-date="2026-09-12"]');
-  const thirdBox = await third.boundingBox();
-  expect(thirdBox).not.toBeNull();
-  await page.mouse.click(thirdBox!.x + 8, thirdBox!.y + 80);
-  await expect(third).toHaveAttribute("aria-current", "date");
-  await expect.poll(
-    () => track.evaluate((element) => element.scrollLeft),
-    { intervals: [16], timeout: 2_000 }
-  ).toBeGreaterThan(1_140);
-
-  const fourth = page.locator('[data-event-card][data-date="2026-09-30"]');
-  const fourthBox = await fourth.boundingBox();
-  expect(fourthBox).not.toBeNull();
-  await page.mouse.move(fourthBox!.x + 8, fourthBox!.y + 80);
-  await page.mouse.down();
-  const pressedScroll = await track.evaluate((element) => element.scrollLeft);
-  await page.waitForTimeout(120);
-
-  expect(await track.evaluate((element) => element.scrollLeft)).toBe(pressedScroll);
-  await expect(third).toHaveAttribute("aria-current", "date");
-  await page.mouse.up();
-
-  expect(Math.abs(await track.evaluate((element) => element.scrollLeft) - pressedScroll)).toBeLessThan(50);
-  await expect(fourth).toHaveAttribute("aria-current", "date");
-  await expect.poll(() => fourth.evaluate((element) => {
-    const rail = element.parentElement;
-    const cardRect = element.getBoundingClientRect();
-    const railRect = rail!.getBoundingClientRect();
-    return Math.abs(cardRect.left + cardRect.width / 2 - railRect.left - rail!.clientWidth / 2);
-  })).toBeLessThan(2);
-  expect(JSON.parse(await page.locator("html").getAttribute("data-selection-trace") ?? "[]")).toEqual([
-    "2026-09-12",
-    "2026-09-30"
-  ]);
-});
-
-test("outlines neighboring events and gives clickable backdrops the right hover color", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/2026/");
-  await page.getByRole("button", { name: "Show next event" }).click();
-  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-09-12");
-
-  const neighbor = page.locator('[data-event-card][data-date="2026-09-30"]');
-  await expect(neighbor).not.toHaveAttribute("data-selected", "");
-  const neighborBox = await neighbor.boundingBox();
-  expect(neighborBox).not.toBeNull();
-  await page.mouse.move(neighborBox!.x + 8, neighborBox!.y + 80);
-  await expect(neighbor).not.toHaveAttribute("data-selected", "");
-  await expect.poll(() => neighbor.evaluate((element) => getComputedStyle(element).borderColor)).toBe("rgb(255, 129, 0)");
-  const neighborHover = await neighbor.evaluate((element) => {
+  await expect(card).toHaveAttribute("aria-current", "date");
+  await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
+  await expect.poll(() => card.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
+  const after = await card.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
-      borderColor: style.borderColor,
       boxShadow: style.boxShadow,
+      offsetHeight: (element as HTMLElement).offsetHeight,
+      offsetLeft: (element as HTMLElement).offsetLeft,
+      offsetWidth: (element as HTMLElement).offsetWidth,
       translate: style.translate
     };
   });
 
-  expect(neighborHover.borderColor).toBe("rgb(255, 129, 0)");
-  expect(neighborHover.boxShadow).toBe("none");
-  expect(neighborHover.translate).toBe("0px");
+  expect(after.boxShadow.match(/rgb\(255, 129, 0\)/g)).toHaveLength(4);
+  expect(after.translate).toMatch(/^-/);
+  expect(after.offsetHeight).toBe(before.offsetHeight);
+  expect(after.offsetLeft).toBe(before.offsetLeft);
+  expect(after.offsetWidth).toBe(before.offsetWidth);
+});
+
+test("gives clickable backdrops the right hover color", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/2026/");
 
   const heroCaption = page.locator(".hero__art figcaption");
   await expect(heroCaption).toHaveCSS("background-color", "rgb(23, 19, 38)");

@@ -70,20 +70,22 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
           <h2 id="events-title">Next stop: ship.</h2>
         </div>
         <p>
-          The rail opens on the next event automatically. Scroll either way to revisit the full series.
+          The next confirmed Budapest event is ready. More dates will appear here as they are announced.
         </p>
       </div>
 
       <div class="event-browser" data-event-browser>
-        <div class="event-controls" aria-label="Event navigation">
-          <button type="button" data-event-direction="-1" aria-label="Show previous event">
-            <span aria-hidden="true">←</span>
-          </button>
-          <output data-event-counter aria-live="polite">1 / {events.length}</output>
-          <button type="button" data-event-direction="1" aria-label="Show next event">
-            <span aria-hidden="true">→</span>
-          </button>
-        </div>
+        {events.length > 1 && (
+          <div class="event-controls" aria-label="Event navigation">
+            <button type="button" data-event-direction="-1" aria-label="Show previous event">
+              <span aria-hidden="true">←</span>
+            </button>
+            <output data-event-counter aria-live="polite">1 / {events.length}</output>
+            <button type="button" data-event-direction="1" aria-label="Show next event">
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        )}
 
         <ol class="event-track" data-event-track aria-label="Shipaton Budapest event dates">
           {events.map(({ id, data: event }) => (
@@ -95,7 +97,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
               data-date={event.date}
               data-title={event.title}
               data-venue={event.venue}
-              tabindex="0"
+              tabindex={events.length > 1 ? "0" : undefined}
             >
               <div class="event-card__topline">
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
@@ -126,7 +128,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
       </div>
 
       <p class="schedule-note">
-        <span aria-hidden="true">✦</span> Schedule draft — final venues, times, and local registration links will be added as they are confirmed.
+        <span aria-hidden="true">✦</span> Registration is open for the confirmed Project Kickoff.
       </p>
     </section>
 
