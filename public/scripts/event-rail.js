@@ -1,10 +1,15 @@
-const browser = document.querySelector("[data-event-browser]");
-const track = browser?.querySelector("[data-event-track]");
-const cards = Array.from(browser?.querySelectorAll("[data-event-card]") ?? []);
-const counter = browser?.querySelector("[data-event-counter]");
-const buttons = Array.from(browser?.querySelectorAll("[data-event-direction]") ?? []);
+const initEventRail = () => {
+  const browser = document.querySelector("[data-event-browser]");
+  const track = browser?.querySelector("[data-event-track]");
+  const cards = Array.from(browser?.querySelectorAll("[data-event-card]") ?? []);
+  const counter = browser?.querySelector("[data-event-counter]");
+  const buttons = Array.from(browser?.querySelectorAll("[data-event-direction]") ?? []);
 
-if (browser && track && cards.length && counter) {
+  if (!browser || !track || !cards.length || !counter || browser.dataset.eventRailBound) return;
+  browser.dataset.eventRailBound = "true";
+
+  const controller = new AbortController();
+  const { signal } = controller;
   const todayParts = new Intl.DateTimeFormat("en", {
     day: "2-digit",
     month: "2-digit",
@@ -16,7 +21,18 @@ if (browser && track && cards.length && counter) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let activeIndex = -1;
   let centerTarget = null;
+  let initialFrame = 0;
   let scrollFrame = 0;
+  let snapTimer = 0;
+
+  const cleanup = () => {
+    cancelAnimationFrame(initialFrame);
+    cancelAnimationFrame(scrollFrame);
+    window.clearTimeout(snapTimer);
+    controller.abort();
+  };
+
+  document.addEventListener("astro:before-swap", cleanup, { once: true, signal });
 
   const restoreSnapping = () => track.style.removeProperty("scroll-snap-type");
 
@@ -73,20 +89,32 @@ if (browser && track && cards.length && counter) {
     if (location) location.textContent = featuredCard.dataset.venue ?? "Budapest";
   }
 
-  requestAnimationFrame(() => centerCard(cards[activeIndex], false));
+  initialFrame = requestAnimationFrame(() => centerCard(cards[activeIndex], false));
 
   buttons.forEach((button) => {
-    button.addEventListener("click", () => selectCard(activeIndex + Number(button.dataset.eventDirection), true));
+    button.addEventListener(
+      "click",
+      () => selectCard(activeIndex + Number(button.dataset.eventDirection), true),
+      { signal }
+    );
   });
 
   cards.forEach((card, index) => {
-    card.addEventListener("focusin", (event) => {
-      if (event.target.matches(":focus-visible")) selectCard(index, true);
-    });
-    card.addEventListener("click", (event) => {
-      if (event.target.closest("a")) restoreSnapping();
-      else selectCard(index, true);
-    });
+    card.addEventListener(
+      "focusin",
+      (event) => {
+        if (event.target.matches(":focus-visible")) selectCard(index, true);
+      },
+      { signal }
+    );
+    card.addEventListener(
+      "click",
+      (event) => {
+        if (event.target.closest("a")) restoreSnapping();
+        else selectCard(index, true);
+      },
+      { signal }
+    );
   });
 
   const pauseCentering = () => {
@@ -97,11 +125,18 @@ if (browser && track && cards.length && counter) {
     track.scrollTo({ left, behavior: "auto" });
   };
   const cancelCentering = () => { centerTarget = null; };
-  track.addEventListener("pointerdown", pauseCentering, { capture: true, passive: true });
-  window.addEventListener("pointerup", () => window.setTimeout(restoreSnapping), { passive: true });
-  window.addEventListener("pointercancel", restoreSnapping, { passive: true });
-  track.addEventListener("wheel", cancelCentering, { passive: true });
-  track.addEventListener("keydown", cancelCentering);
+  track.addEventListener("pointerdown", pauseCentering, { capture: true, passive: true, signal });
+  window.addEventListener(
+    "pointerup",
+    () => {
+      window.clearTimeout(snapTimer);
+      snapTimer = window.setTimeout(restoreSnapping);
+    },
+    { passive: true, signal }
+  );
+  window.addEventListener("pointercancel", restoreSnapping, { passive: true, signal });
+  track.addEventListener("wheel", cancelCentering, { passive: true, signal });
+  track.addEventListener("keydown", cancelCentering, { signal });
 
   track.addEventListener(
     "scroll",
@@ -123,6 +158,13 @@ if (browser && track && cards.length && counter) {
         selectCard(closestIndex);
       });
     },
-    { passive: true }
+    { passive: true, signal }
   );
+};
+
+if (!window.__shipatonEventRailBound) {
+  window.__shipatonEventRailBound = true;
+  document.addEventListener("astro:page-load", initEventRail);
 }
+
+initEventRail();

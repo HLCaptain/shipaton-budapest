@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
 
 type Props = {
   title: string;
@@ -26,6 +27,7 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary" />
+    <ClientRouter fallback="animate" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -45,7 +47,9 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
         <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
-    <slot />
+    <div class="page-transition" transition:name="page-content">
+      <slot />
+    </div>
     <footer class="site-footer">
       <div class="site-footer__grid">
         <section class="site-footer__brand" aria-labelledby="footer-brand-title">
@@ -90,5 +94,6 @@ const eventsCurrent = Astro.url.pathname.startsWith("/events");
         <p>Community-led in Budapest · August—September 2026</p>
       </div>
     </footer>
+    <script is:inline src="/scripts/page-transitions.js" defer></script>
   </body>
 </html>

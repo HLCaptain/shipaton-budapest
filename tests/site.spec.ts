@@ -122,6 +122,104 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/events\/$/);
 });
 
+test("keeps page motion directional and stable from a scrolled route", async ({ page }) => {
+  await page.goto("/");
+
+  const motion = await page.evaluate(() => {
+    const root = document.documentElement;
+    const pageContent = document.querySelector(".page-transition")!;
+    const outgoing = getComputedStyle(root, "::view-transition-old(page-content)");
+    const incoming = getComputedStyle(root, "::view-transition-new(page-content)");
+    root.setAttribute("data-astro-transition-fallback", "old");
+    const fallbackOutgoing = getComputedStyle(pageContent);
+    const fallbackOutgoingMotion = [fallbackOutgoing.animationName, fallbackOutgoing.animationDuration];
+    root.setAttribute("data-astro-transition-fallback", "new");
+    const fallbackIncoming = getComputedStyle(pageContent);
+    const fallbackIncomingMotion = [fallbackIncoming.animationName, fallbackIncoming.animationDuration];
+    root.removeAttribute("data-astro-transition-fallback");
+    return {
+      easing: incoming.animationTimingFunction,
+      fallbackIncomingMotion,
+      fallbackOutgoingMotion,
+      incomingDuration: incoming.animationDuration,
+      outgoingDuration: outgoing.animationDuration,
+      rootAnimation: getComputedStyle(root, "::view-transition-old(root)").animationName
+    };
+  });
+
+  expect(motion).toEqual({
+    easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    fallbackIncomingMotion: ["page-in", "0.42s"],
+    fallbackOutgoingMotion: ["page-fallback-out", "0.18s"],
+    incomingDuration: "0.42s",
+    outgoingDuration: "0.18s",
+    rootAnimation: "none"
+  });
+
+  await page.locator("#events").evaluate((element) => {
+    element.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+  });
+  const sourceScrollY = await page.evaluate(() => window.scrollY);
+  expect(sourceScrollY).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    document.addEventListener(
+      "astro:before-preparation",
+      () => {
+        (window as Window & { __shipatonMotionSource?: { offset: string; scrollY: number } }).__shipatonMotionSource = {
+          offset: document.documentElement.style.getPropertyValue("--page-old-scroll-offset-y"),
+          scrollY: window.scrollY
+        };
+      },
+      { once: true }
+    );
+  });
+  await page
+    .locator('[data-event-card][data-date="2026-08-22"]')
+    .getByRole("link", { name: "View event details" })
+    .evaluate((link) => (link as HTMLAnchorElement).click());
+
+  await expect(page).toHaveURL(/\/events\/build-sprint-one\/$/);
+  await expect(page.locator("html")).toHaveAttribute("data-page-direction", "down");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  const motionSource = await page.evaluate(
+    () => (window as Window & { __shipatonMotionSource?: { offset: string; scrollY: number } }).__shipatonMotionSource
+  );
+  expect(motionSource?.offset).toBe(`${-motionSource!.scrollY}px`);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).toHaveAttribute("data-page-direction", "up");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(motionSource!.scrollY);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-new(page-content)").animationName)
+  ).toBe("none");
+});
+
+test("reinitializes page features across repeated client-side visits", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => ((window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker = "alive"));
+
+  await page.getByRole("link", { name: "Events", exact: true }).click();
+  await page.getByRole("link", { name: /Ship clinic/ }).click();
+  await expect(page.getByRole("button", { name: "Copy link to Goals" })).toHaveCount(1);
+
+  await page.getByRole("link", { name: "Back to all events", exact: true }).click();
+  await page.getByRole("link", { name: /Build sprint 01/ }).click();
+  await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
+
+  await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(
+    await page.evaluate(() => (window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker)
+  ).toBe("alive");
+  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-22");
+  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 4");
+  await page.getByRole("button", { name: "Show next event" }).click();
+  await expect(page.locator("[data-event-counter]")).toHaveText("3 / 4");
+});
+
 test("keeps the event detail body compact and aligned", async ({ page }) => {
   await page.goto("/events/build-sprint-one/");
 

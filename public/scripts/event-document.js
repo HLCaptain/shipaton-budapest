@@ -1,7 +1,10 @@
-const article = document.querySelector(".event-document__body");
-const copyStatus = document.querySelector("[data-heading-copy-status]");
+const initEventDocument = () => {
+  const article = document.querySelector(".event-document__body");
+  const copyStatus = document.querySelector("[data-heading-copy-status]");
 
-if (article && copyStatus) {
+  if (!article || !copyStatus || article.dataset.headingLinksBound) return;
+  article.dataset.headingLinksBound = "true";
+
   for (const heading of article.querySelectorAll(":is(h2, h3, h4)[id]")) {
     const label = heading.textContent?.trim() || "section";
     const row = document.createElement("div");
@@ -43,4 +46,11 @@ if (article && copyStatus) {
 
     row.prepend(button);
   }
+};
+
+if (!window.__shipatonEventDocumentBound) {
+  window.__shipatonEventDocumentBound = true;
+  document.addEventListener("astro:page-load", initEventDocument);
 }
+
+initEventDocument();
