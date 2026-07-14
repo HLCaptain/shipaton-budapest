@@ -113,12 +113,34 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   const backLink = page.getByRole("link", { name: "All events", exact: true }).first();
   await expect(backLink).toHaveClass(/button--quiet/);
   await expect(backLink).toHaveClass(/button--compact/);
+  await expect(backLink.locator(".button__icon")).toHaveCount(1);
   expect(await backLink.evaluate((link) => link.getBoundingClientRect().width < link.parentElement!.getBoundingClientRect().width)).toBe(true);
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
   await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
 
   await page.getByRole("link", { name: "Back to all events" }).click();
   await expect(page).toHaveURL(/\/events\/$/);
+});
+
+test("keeps the event detail body compact and aligned", async ({ page }) => {
+  await page.goto("/events/build-sprint-one/");
+
+  const aboutHeading = page.getByRole("heading", { name: "About this event", exact: true });
+  const body = page.locator(".event-document__body");
+  const intro = body.locator("> p").first();
+  const headingBox = await aboutHeading.boundingBox();
+  const bodyBox = await body.boundingBox();
+  const backMargin = await page.locator(".event-document__back").evaluate((element) => getComputedStyle(element).marginBottom);
+  const aboutMargin = await page.locator(".event-about").evaluate((element) => getComputedStyle(element).marginTop);
+
+  expect(headingBox).not.toBeNull();
+  expect(bodyBox).not.toBeNull();
+  expect(Math.abs(headingBox!.x - bodyBox!.x)).toBeLessThan(1);
+  expect(Number.parseFloat(backMargin)).toBeLessThanOrEqual(56);
+  expect(Number.parseFloat(aboutMargin)).toBeLessThanOrEqual(80);
+  await expect(intro).toHaveCSS("color", "rgb(81, 70, 99)");
+  await expect(intro).toHaveCSS("font-weight", "500");
+  await expect(page.getByRole("link", { name: "Back to all events", exact: true }).locator(".button__icon")).toHaveCount(1);
 });
 
 test("keeps Budapest beside the brand and exposes contact links", async ({ page }) => {
