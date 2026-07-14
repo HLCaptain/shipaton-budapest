@@ -1,0 +1,54 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const documentedEvents = (await getCollection("events")).filter(({ body }) => body?.trim());
+
+  return documentedEvents.map((event) => ({
+    params: { id: event.id },
+    props: { event }
+  }));
+}
+
+type Props = {
+  event: CollectionEntry<"events">;
+};
+
+const { event } = Astro.props;
+const { Content } = await render(event);
+const date = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Budapest"
+}).format(new Date(`${event.data.date}T12:00:00Z`));
+---
+
+<BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
+  <main class="event-document" id="main-content">
+    <a class="event-document__back" href="/#events">← All Budapest events</a>
+
+    <header class="event-document__header">
+      <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
+      <h1>{event.data.title}</h1>
+      <p>{event.data.description}</p>
+      {(event.data.presentation || event.data.attachment) && (
+        <nav class="event-document__resources" aria-label="Event resources">
+          {event.data.presentation && <a class="button button--primary" href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></a>}
+          {event.data.attachment && <a class="button button--quiet" href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></a>}
+        </nav>
+      )}
+    </header>
+
+    <article class="event-document__body">
+      <Content />
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>Shipaton Budapest · community event series · 2026</p>
+    <p><a href="/#events">Back to the event rail</a></p>
+  </footer>
+</BaseLayout>

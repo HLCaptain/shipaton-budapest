@@ -77,28 +77,36 @@ test("keeps content inside the viewport and exposes the important links", async 
   expect(pageWeight.bytes).toBeLessThan(300 * 1024);
 });
 
-test("uses an attached event extension and a full-width dark footer", async ({ page }) => {
+test("uses a full-width dark footer", async ({ page }) => {
   await page.goto("/");
 
-  const treatment = await page.locator('[data-event-card][aria-current="date"]').evaluate((card) => {
-    const extension = getComputedStyle(card, "::after");
-    const cardWidth = card.getBoundingClientRect().width;
-    const footer = document.querySelector(".site-footer");
-
+  const treatment = await page.locator(".site-footer").evaluate((footer) => {
     return {
-      cardWidth,
-      extensionHeight: Number.parseFloat(extension.height),
-      extensionWidth: Number.parseFloat(extension.width),
-      footerBackground: footer ? getComputedStyle(footer).backgroundColor : "",
-      footerWidth: footer?.getBoundingClientRect().width ?? 0,
-      viewportWidth: window.innerWidth,
-      boxShadow: getComputedStyle(card).boxShadow
+      background: getComputedStyle(footer).backgroundColor,
+      width: footer.getBoundingClientRect().width,
+      viewportWidth: window.innerWidth
     };
   });
 
-  expect(treatment.boxShadow).toBe("none");
-  expect(treatment.extensionHeight).toBeGreaterThan(0);
-  expect(treatment.extensionWidth).toBeLessThan(treatment.cardWidth);
-  expect(treatment.footerBackground).toBe("rgb(23, 19, 38)");
-  expect(treatment.footerWidth).toBe(treatment.viewportWidth);
+  expect(treatment.background).toBe("rgb(23, 19, 38)");
+  expect(treatment.width).toBe(treatment.viewportWidth);
+});
+
+test("extrudes Budapest kickoff from its original position on hover", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Show previous event" }).click();
+
+  const card = page.locator('[data-event-card][data-date="2026-08-01"]');
+  await expect(card).toHaveAttribute("aria-current", "date");
+  const before = await card.boundingBox();
+  await card.hover();
+  await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
+  const after = await card.boundingBox();
+
+  expect(before).not.toBeNull();
+  expect(after).not.toBeNull();
+  expect(after!.x).toBeLessThan(before!.x - 5);
+  expect(after!.y).toBeLessThan(before!.y - 5);
 });

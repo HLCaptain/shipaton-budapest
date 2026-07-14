@@ -401,7 +401,7 @@ svg {
   --card-width: min(84vw, 42rem);
   display: grid;
   margin: 0;
-  padding: 0 max(var(--page-gutter), calc((100% - var(--card-width)) / 2)) 2.25rem;
+  padding: 0.75rem max(var(--page-gutter), calc((100% - var(--card-width)) / 2)) 2.25rem;
   grid-auto-columns: var(--card-width);
   grid-auto-flow: column;
   gap: clamp(1rem, 2.5vw, 2rem);
@@ -427,7 +427,7 @@ svg {
   opacity: 0.62;
   scroll-snap-align: center;
   transform: scale(0.96);
-  transition: border-color 180ms ease, opacity 180ms ease, transform 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease;
 }
 
 .event-card[data-selected] {
@@ -436,17 +436,17 @@ svg {
   transform: scale(1);
 }
 
-.event-card[data-selected]::after {
-  position: absolute;
-  right: 0.9rem;
-  bottom: -0.75rem;
-  width: 52%;
-  height: 0.75rem;
-  border: 2px solid var(--orange);
-  border-top: 0;
-  border-radius: 0 0 6px 6px;
-  background: var(--orange);
-  content: "";
+@media (hover: hover) {
+  .event-card:hover {
+    border-color: var(--orange);
+    box-shadow: 0.5rem 0.5rem 0 var(--orange);
+    opacity: 1;
+    transform: translate(-0.5rem, -0.5rem) scale(0.96);
+  }
+
+  .event-card[data-selected]:hover {
+    transform: translate(-0.5rem, -0.5rem) scale(1);
+  }
 }
 
 .event-card__topline {
@@ -540,10 +540,15 @@ svg {
 
 .event-card__soon {
   display: block;
+  width: fit-content;
   margin-top: 1.4rem;
   color: var(--orange);
   font-size: 0.82rem;
   font-weight: 850;
+}
+
+a.event-card__soon:hover {
+  text-decoration-thickness: 2px;
 }
 
 .schedule-note {
@@ -608,6 +613,67 @@ svg {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.6;
+}
+
+.event-document {
+  width: min(100%, 64rem);
+  min-height: calc(100vh - 5rem);
+  margin-inline: auto;
+  padding: clamp(2rem, 7vw, 5rem) var(--page-gutter) clamp(4rem, 9vw, 7rem);
+}
+
+.event-document__back {
+  display: inline-block;
+  margin-bottom: clamp(3rem, 8vw, 6rem);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.event-document__header {
+  padding-bottom: clamp(2.5rem, 6vw, 4rem);
+  border-bottom: 2px solid var(--space);
+}
+
+.event-document__header h1 {
+  margin: 0;
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+
+.event-document__header > p:not(.eyebrow) {
+  max-width: 45rem;
+  margin: 1.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.65;
+}
+
+.event-document__resources {
+  display: flex;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.event-document__body {
+  max-width: 48rem;
+  padding-top: clamp(2.5rem, 6vw, 4rem);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.event-document__body > :first-child {
+  margin-top: 0;
+}
+
+.event-document__body :where(h2, h3) {
+  margin: 2.5em 0 0.6em;
+  line-height: 1.1;
 }
 
 .site-footer {

@@ -1,6 +1,8 @@
 ---
+import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { events } from "../data/events";
+
+const events = (await getCollection("events")).sort((a, b) => a.data.date.localeCompare(b.data.date));
 
 const pageTitle = "Shipaton Budapest 2026";
 const description =
@@ -86,10 +88,10 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
         </div>
 
         <ol class="event-track" data-event-track aria-label="Shipaton Budapest event dates">
-          {events.map((event) => (
+          {events.map(({ id, data: event, body }) => (
             <li
               class="event-card"
-              id={event.slug}
+              id={id}
               data-event-card
               data-date={event.date}
               tabindex="0"
@@ -112,7 +114,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                   <dd>{event.venue}</dd>
                 </div>
               </dl>
-              <span class="event-card__soon">Local RSVP opens soon</span>
+              {body?.trim() ? (
+                <a class="event-card__soon" href={`/events/${id}/`}>View event documentation <span aria-hidden="true">→</span></a>
+              ) : (
+                <span class="event-card__soon">Local RSVP opens soon</span>
+              )}
             </li>
           ))}
         </ol>

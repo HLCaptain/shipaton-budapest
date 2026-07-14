@@ -24,7 +24,9 @@ The Playwright suite runs at mobile, tablet, and desktop sizes. It fixes the bro
 
 ## Update the schedule
 
-Edit `src/data/events.ts`. Events must remain in chronological order. The page selects the first event on or after the current Budapest date; after the series ends, it selects the last event.
+Add or edit an entry in `src/content/events/`; the page sorts entries by date and selects the first event on or after the current Budapest date. Copy `_template.mdx` for the complete field list.
+
+Writing anything below an event's frontmatter publishes `/events/<filename>/` and adds a documentation link to its card. Optional `presentation` and `attachment` fields add resource links to that page; put uploaded files under `public/documents/`.
 
 The checked-in entries are a draft because no public Budapest listing currently exists on the official Shipaton calendar.
 
