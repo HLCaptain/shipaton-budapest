@@ -53,6 +53,7 @@ test("can select an earlier event by scrolling back", async ({ page }) => {
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
   await page.goto("/");
 
+  await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute("href", "/events/");
   await expect(page.getByRole("link", { name: "Explore the dates" })).toHaveAttribute("href", "#events");
   await expect(page.getByRole("link", { name: /Join Shipaton/ })).toHaveAttribute(
     "href",
@@ -75,6 +76,49 @@ test("keeps content inside the viewport and exposes the important links", async 
   });
   expect(pageWeight.requests).toBeLessThanOrEqual(8);
   expect(pageWeight.bytes).toBeLessThan(300 * 1024);
+});
+
+test("links the hero art to the next Budapest event", async ({ page }) => {
+  await page.goto("/");
+
+  const heroLink = page.getByRole("link", { name: "View Build sprint 01 event details" });
+  await expect(heroLink).toHaveAttribute("href", "/events/build-sprint-one/");
+  await expect(heroLink.locator("[data-featured-title]")).toHaveText("Build sprint 01");
+  await expect(heroLink.locator("[data-featured-location]")).toHaveText("Budapest · venue announced soon");
+  await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
+});
+
+test("navigates from the event grid to MDX details and back", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Events", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/events\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Meet. Make.");
+  await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
+  await expect(page.locator(".event-grid-card")).toHaveCount(4);
+  await page.getByRole("link", { name: /Ship clinic/ }).click();
+
+  await expect(page).toHaveURL(/\/events\/ship-clinic\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ship clinic");
+  await expect(page.locator(".event-document__facts")).toContainText("Budapest · venue announced soon");
+  await expect(page.locator(".event-document__facts")).toContainText("Product feedback · App quality · Store readiness");
+  await expect(page.locator(".event-document__facts")).toContainText("Local registration opens soon");
+  await expect(page.getByRole("link", { name: /official listing/ })).toHaveAttribute("href", "https://www.shipaton.com/events");
+  await expect(page.locator(".event-schedule > ol > li")).toHaveCount(4);
+  await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
+
+  await page.getByRole("link", { name: "Back to all events" }).click();
+  await expect(page).toHaveURL(/\/events\/$/);
+});
+
+test("keeps Budapest beside the brand and exposes organizer credits", async ({ page }) => {
+  await page.goto("/");
+
+  const brand = page.getByRole("link", { name: "Shipaton Budapest home" });
+  await expect(brand.locator("span")).toHaveText("Budapest");
+  await expect(page.getByRole("link", { name: /Media kit/ })).toHaveAttribute("href", "https://www.shipaton.com/media-kit");
+  await expect(page.getByRole("link", { name: /Organizer on GitHub/ })).toHaveAttribute("href", "https://github.com/HLCaptain");
+  await expect(page.getByRole("link", { name: /@hlcaptain on X/ })).toHaveAttribute("href", "https://x.com/hlcaptain");
 });
 
 test("uses a full-width dark footer", async ({ page }) => {
@@ -240,7 +284,7 @@ test("freezes an in-flight transition under the pointer", async ({ page }, testI
   ]);
 });
 
-test("outlines neighboring events and extrudes backdrop cards only on hover", async ({ page }, testInfo) => {
+test("outlines neighboring events and gives clickable backdrops the right hover color", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Hover treatment only applies to hover-capable pointers");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -267,9 +311,18 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
   expect(neighborHover.boxShadow).toBe("none");
   expect(neighborHover.translate).toBe("0px");
 
-  for (const backdrop of [
-    page.getByRole("link", { name: "Explore the dates" }).locator(".button--primary"),
-    page.locator(".hero__art")
+  const heroCaption = page.locator(".hero__art figcaption");
+  await expect(heroCaption).toHaveCSS("background-color", "rgb(23, 19, 38)");
+
+  for (const { backdrop, color } of [
+    {
+      backdrop: page.getByRole("link", { name: "Explore the dates" }).locator(".button--primary"),
+      color: "rgb(23, 19, 38)"
+    },
+    {
+      backdrop: page.locator(".hero__art"),
+      color: "rgb(255, 129, 0)"
+    }
   ]) {
     await page.mouse.move(0, 0);
     const before = await backdrop.evaluate((element) => ({
@@ -280,7 +333,7 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
 
     expect(before.boxShadow).toBe("none");
     await backdrop.hover();
-    await expect.poll(() => backdrop.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(23, 19, 38)");
+    await expect.poll(() => backdrop.evaluate((element) => getComputedStyle(element).boxShadow)).toContain(color);
     await expect.poll(() => backdrop.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
     const after = await backdrop.evaluate((element) => {
       const style = getComputedStyle(element);
@@ -292,11 +345,13 @@ test("outlines neighboring events and extrudes backdrop cards only on hover", as
       };
     });
 
-    expect(after.boxShadow.match(/rgb\(23, 19, 38\)/g)).toHaveLength(4);
+    expect(after.boxShadow.split(color)).toHaveLength(5);
     expect(after.translate).toMatch(/^-/);
     expect(after.offsetHeight).toBe(before.offsetHeight);
     expect(after.offsetWidth).toBe(before.offsetWidth);
   }
+
+  await expect(heroCaption).toHaveCSS("background-color", "rgb(255, 129, 0)");
 
   const primary = page.getByRole("link", { name: "Explore the dates" });
   await page.mouse.move(0, 0);

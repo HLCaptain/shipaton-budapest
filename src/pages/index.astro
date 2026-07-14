@@ -3,6 +3,8 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const events = (await getCollection("events")).sort((a, b) => a.data.date.localeCompare(b.data.date));
+const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
+const featuredEvent = events.find(({ data }) => data.date >= today) ?? events.at(-1)!;
 
 const pageTitle = "Shipaton Budapest 2026";
 const description =
@@ -16,29 +18,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
 ---
 
 <BaseLayout title={pageTitle} description={description}>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="Shipaton Budapest home">
-      <img
-        src="/brand/shipaton-wordmark.svg"
-        width="535"
-        height="128"
-        alt="Shipaton 2026"
-        decoding="async"
-      />
-    </a>
-    <div class="site-header__meta">
-      <span>Budapest, HU</span>
-      <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton ↗</a>
-    </div>
-  </header>
-
   <main id="main-content">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero__copy">
         <p class="eyebrow"><span aria-hidden="true"></span> August—September 2026</p>
         <h1 id="hero-title">A local runway for apps that actually ship.</h1>
         <p class="hero__lede">
-          Four practical Budapest meetups for finding momentum, getting unstuck, and crossing the finish line together.
+          Practical Budapest meetups for finding momentum, getting unstuck, and crossing the finish line together.
         </p>
         <div class="hero__actions">
           <a class="button-hit-area" href="#events">
@@ -51,20 +37,27 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
           >Join Shipaton <span aria-hidden="true">↗</span></a>
         </div>
       </div>
-      <figure class="hero__art">
-        <img
-          src="/brand/rocket-launch-wide.svg"
-          width="1000"
-          height="498"
-          alt="Shippy the cat launching in an orange rocket"
-          decoding="async"
-          fetchpriority="high"
-        />
-        <figcaption>
-          <span>Launch point</span>
-          <strong>47.4979° N · 19.0402° E</strong>
-        </figcaption>
-      </figure>
+      <a
+        class="hero__art-link"
+        href={`/events/${featuredEvent.id}/`}
+        aria-label={`View ${featuredEvent.data.title} event details`}
+        data-featured-event
+      >
+        <figure class="hero__art">
+          <img
+            src="/brand/rocket-launch-wide.svg"
+            width="1000"
+            height="498"
+            alt="Shippy the cat launching in an orange rocket"
+            decoding="async"
+            fetchpriority="high"
+          />
+          <figcaption>
+            <span data-featured-title>{featuredEvent.data.title}</span>
+            <strong data-featured-location>{featuredEvent.data.venue}</strong>
+          </figcaption>
+        </figure>
+      </a>
     </section>
 
     <section class="events" id="events" aria-labelledby="events-title">
@@ -90,12 +83,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
         </div>
 
         <ol class="event-track" data-event-track aria-label="Shipaton Budapest event dates">
-          {events.map(({ id, data: event, body }) => (
+          {events.map(({ id, data: event }) => (
             <li
               class="event-card"
               id={id}
               data-event-card
+              data-event-id={id}
               data-date={event.date}
+              data-title={event.title}
+              data-venue={event.venue}
               tabindex="0"
             >
               <div class="event-card__topline">
@@ -116,11 +112,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                   <dd>{event.venue}</dd>
                 </div>
               </dl>
-              {body?.trim() ? (
-                <a class="event-card__soon" href={`/events/${id}/`}>View event documentation <span aria-hidden="true">→</span></a>
-              ) : (
-                <span class="event-card__soon">Local RSVP opens soon</span>
-              )}
+              <a class="event-card__soon" href={`/events/${id}/`}>View event details <span aria-hidden="true">→</span></a>
             </li>
           ))}
         </ol>
@@ -155,11 +147,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
       </ol>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <p>Shipaton Budapest · community event series · 2026</p>
-    <p>Official Shipaton artwork by RevenueCat, used from the free-to-use media kit.</p>
-  </footer>
 
   <script is:inline src="/scripts/event-rail.js" defer></script>
 </BaseLayout>

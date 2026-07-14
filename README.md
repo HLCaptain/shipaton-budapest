@@ -24,9 +24,9 @@ The Playwright suite runs at mobile, tablet, and desktop sizes. It fixes the bro
 
 ## Update the schedule
 
-Add or edit an entry in `src/content/events/`; the page sorts entries by date and selects the first event on or after the current Budapest date. Copy `_template.mdx` for the complete field list.
+Add or edit an entry in `src/content/events/`; the site sorts entries by date and selects the first event on or after the current Budapest date. Copy `_template.mdx` for the complete field list.
 
-Writing anything below an event's frontmatter publishes `/events/<filename>/` and adds a documentation link to its card. Optional `presentation` and `attachment` fields add resource links to that page; put uploaded files under `public/documents/`.
+Every entry appears on `/events/` and publishes `/events/<filename>/`. Frontmatter drives the shared facts, tags, schedule, optional RSVP, location, speakers, presentation, and attachments; the MDX body holds the welcoming description and goals. Put uploaded files under `public/documents/`.
 
 The checked-in entries are a draft because no public Budapest listing currently exists on the official Shipaton calendar.
 

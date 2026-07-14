@@ -4,9 +4,7 @@ import { getCollection, render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
-  const documentedEvents = (await getCollection("events")).filter(({ body }) => body?.trim());
-
-  return documentedEvents.map((event) => ({
+  return (await getCollection("events")).map((event) => ({
     params: { id: event.id },
     props: { event }
   }));
@@ -18,6 +16,7 @@ type Props = {
 
 const { event } = Astro.props;
 const { Content } = await render(event);
+const speakers = event.data.speakers ?? [];
 const date = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -28,31 +27,97 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
 <BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
   <main class="event-document" id="main-content">
-    <a class="event-document__back" href="/#events">← All Budapest events</a>
+    <a class="button button--quiet event-document__back" href="/events/">← All events</a>
 
     <header class="event-document__header">
       <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
       <h1>{event.data.title}</h1>
       <p>{event.data.description}</p>
-      {(event.data.presentation || event.data.attachment) && (
+      <dl class="event-document__facts">
+        <div>
+          <dt>Date</dt>
+          <dd><time datetime={event.data.date}>{date}</time></dd>
+        </div>
+        <div>
+          <dt>Time</dt>
+          <dd>{event.data.time}</dd>
+        </div>
+        <div>
+          <dt>Location</dt>
+          <dd>
+            {event.data.locationUrl
+              ? <a href={event.data.locationUrl} rel="noreferrer">{event.data.venue} <span aria-hidden="true">↗</span></a>
+              : event.data.venue}
+          </dd>
+        </div>
+        <div>
+          <dt>Themes</dt>
+          <dd>{event.data.themes.join(" · ")}</dd>
+        </div>
+        <div>
+          <dt>RSVP</dt>
+          <dd>
+            {event.data.rsvp
+              ? <a href={event.data.rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
+              : <span>Local registration opens soon · <a href="https://www.shipaton.com/events" rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
+          </dd>
+        </div>
+      </dl>
+      <ul class="tag-list event-document__tags" aria-label="Event tags">
+        {event.data.tags.map((tag) => <li>{tag}</li>)}
+      </ul>
+      {(event.data.rsvp || event.data.presentation || event.data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
-          {event.data.presentation && (
-            <a class="button-hit-area" href={event.data.presentation}>
-              <span class="button button--primary">Open presentation <span aria-hidden="true">↗</span></span>
+          {event.data.rsvp && (
+            <a class="button-hit-area" href={event.data.rsvp} rel="noreferrer">
+              <span class="button button--primary">RSVP <span aria-hidden="true">↗</span></span>
             </a>
           )}
+          {event.data.presentation && <a class="button button--quiet" href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></a>}
           {event.data.attachment && <a class="button button--quiet" href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></a>}
         </nav>
       )}
     </header>
 
-    <article class="event-document__body">
+    <section class="event-schedule" aria-labelledby="schedule-title">
+      <div class="event-section-heading">
+        <p class="eyebrow"><span aria-hidden="true"></span> Run of show</p>
+        <h2 id="schedule-title">Schedule</h2>
+      </div>
+      <ol>
+        {event.data.schedule.map((item) => (
+          <li>
+            <time>{item.time}</time>
+            <div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {speakers.length > 0 && (
+      <section class="event-speakers" aria-labelledby="speakers-title">
+        <div class="event-section-heading">
+          <p class="eyebrow"><span aria-hidden="true"></span> Meet the people</p>
+          <h2 id="speakers-title">Speakers</h2>
+        </div>
+        <ul>
+          {speakers.map((speaker) => (
+            <li>
+              <h3>{speaker.url ? <a href={speaker.url} rel="noreferrer">{speaker.name} <span aria-hidden="true">↗</span></a> : speaker.name}</h3>
+              <p>{speaker.role}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <article class="event-document__body" aria-label="About this event">
       <Content />
     </article>
-  </main>
 
-  <footer class="site-footer">
-    <p>Shipaton Budapest · community event series · 2026</p>
-    <p><a href="/#events">Back to the event rail</a></p>
-  </footer>
+    <a class="button button--quiet event-document__end-link" href="/events/">← Back to all events</a>
+  </main>
 </BaseLayout>

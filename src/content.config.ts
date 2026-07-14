@@ -12,6 +12,20 @@ const events = defineCollection({
     description: z.string(),
     time: z.string(),
     venue: z.string(),
+    themes: z.array(z.string()).min(1),
+    tags: z.array(z.string()).min(1),
+    schedule: z.array(z.object({
+      time: z.string(),
+      title: z.string(),
+      description: z.string()
+    })).min(1),
+    rsvp: z.url().optional(),
+    locationUrl: z.url().optional(),
+    speakers: z.array(z.object({
+      name: z.string(),
+      role: z.string(),
+      url: z.url().optional()
+    })).optional(),
     presentation: z.string().optional(),
     attachment: z.string().optional()
   })

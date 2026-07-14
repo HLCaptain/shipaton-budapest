@@ -59,7 +59,20 @@ if (browser && track && cards.length && counter) {
   };
 
   const firstUpcoming = cards.findIndex((card) => (card.dataset.date ?? "") >= today);
-  selectCard(firstUpcoming >= 0 ? firstUpcoming : cards.length - 1);
+  const featuredIndex = firstUpcoming >= 0 ? firstUpcoming : cards.length - 1;
+  const featuredCard = cards[featuredIndex];
+  const featuredLink = document.querySelector("[data-featured-event]");
+  selectCard(featuredIndex);
+
+  if (featuredLink && featuredCard.dataset.eventId) {
+    featuredLink.href = `/events/${featuredCard.dataset.eventId}/`;
+    featuredLink.setAttribute("aria-label", `View ${featuredCard.dataset.title} event details`);
+    const title = featuredLink.querySelector("[data-featured-title]");
+    const location = featuredLink.querySelector("[data-featured-location]");
+    if (title) title.textContent = featuredCard.dataset.title ?? "Upcoming event";
+    if (location) location.textContent = featuredCard.dataset.venue ?? "Budapest";
+  }
+
   requestAnimationFrame(() => centerCard(cards[activeIndex], false));
 
   buttons.forEach((button) => {
