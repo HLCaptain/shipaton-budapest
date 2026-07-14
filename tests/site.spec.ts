@@ -97,6 +97,23 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
+test("uses browser history for the detail page's top back button", async ({ page }) => {
+  await page.goto("/2026/?source=history");
+  await page.getByRole("link", { name: "View Build sprint 01 event details" }).click();
+
+  await expect(page).toHaveURL(/\/2026\/events\/build-sprint-one\/$/);
+  const backButton = page.getByRole("button", { name: "Back", exact: true });
+  await expect(backButton).toHaveClass(/button--quiet/);
+  await expect(backButton).toHaveClass(/button--compact/);
+  await expect(backButton.locator(".button__icon")).toHaveCount(1);
+  expect(await backButton.evaluate((button) => (
+    button.getBoundingClientRect().width < button.parentElement!.getBoundingClientRect().width
+  ))).toBe(true);
+
+  await backButton.click();
+  await expect(page).toHaveURL(/\/2026\/\?source=history$/);
+});
+
 test("publishes the isolated 2026 event routes", async ({ page }) => {
   await page.goto("/2026/events/");
 
@@ -147,11 +164,6 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  const backLink = page.getByRole("link", { name: "2026 events", exact: true }).first();
-  await expect(backLink).toHaveClass(/button--quiet/);
-  await expect(backLink).toHaveClass(/button--compact/);
-  await expect(backLink.locator(".button__icon")).toHaveCount(1);
-  expect(await backLink.evaluate((link) => link.getBoundingClientRect().width < link.parentElement!.getBoundingClientRect().width)).toBe(true);
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Goals" })).toHaveAttribute("href", "#goals");
   await expect(page.locator(".event-document__body")).toContainText("Welcome to a practical problem-solving room");
 

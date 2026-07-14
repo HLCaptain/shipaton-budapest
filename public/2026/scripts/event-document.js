@@ -1,4 +1,10 @@
 const initEventDocument = () => {
+  const backButton = document.querySelector("[data-history-back]");
+  if (backButton && !backButton.dataset.historyBackBound) {
+    backButton.dataset.historyBackBound = "true";
+    backButton.addEventListener("click", () => history.back());
+  }
+
   const article = document.querySelector(".event-document__body");
   const copyStatus = document.querySelector("[data-heading-copy-status]");
 
