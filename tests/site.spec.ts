@@ -52,6 +52,23 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
   await expect(event).not.toHaveAttribute("tabindex");
   await expect(event).toHaveCSS("cursor", "default");
   await expect(page.locator(".event-controls")).toHaveCount(0);
+  const ctaLayout = await event.getByRole("link", { name: "View event details" }).evaluate((link) => {
+    const card = link.closest<HTMLElement>("[data-event-card]")!;
+    const cardBox = card.getBoundingClientRect();
+    const linkBox = link.getBoundingClientRect();
+    const cardStyle = getComputedStyle(card);
+    return {
+      bottomInset: cardBox.bottom - linkBox.bottom,
+      bottomPadding: Number.parseFloat(cardStyle.paddingBottom),
+      linkFontSize: Number.parseFloat(getComputedStyle(link).fontSize),
+      rightInset: cardBox.right - linkBox.right,
+      rightPadding: Number.parseFloat(cardStyle.paddingRight),
+      arrowFontSize: Number.parseFloat(getComputedStyle(link.querySelector("span")!).fontSize)
+    };
+  });
+  expect(Math.abs(ctaLayout.rightInset - ctaLayout.rightPadding)).toBeLessThan(3);
+  expect(Math.abs(ctaLayout.bottomInset - ctaLayout.bottomPadding)).toBeLessThan(3);
+  expect(ctaLayout.arrowFontSize).toBeGreaterThan(ctaLayout.linkFontSize);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   expect(consoleErrors).toEqual([]);
 });
@@ -163,7 +180,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(facts).toContainText("Mobile development · Team formation · AI-assisted coding");
   await expect(facts.getByRole("link", { name: /Genesys Cloud Services Hungary/ })).toHaveAttribute(
     "href",
-    "https://www.google.com/maps/search/?api=1&query=47.509769399999996%2C19.058209299999998&query_place_id=ChIJo5TJXgDdQUcRZC48XlVw3VA"
+    "https://maps.app.goo.gl/4Qk2mNq2eZ7592NPA"
   );
   await expect(page.getByRole("link", { name: /Reserve a place/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");
   await expect(page.getByRole("link", { name: /^RSVP/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");

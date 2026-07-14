@@ -730,12 +730,20 @@ svg {
 }
 
 .event-card__soon {
-  display: block;
+  display: inline-flex;
   width: fit-content;
   margin-top: 1.4rem;
+  align-self: flex-end;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--orange);
   font-size: 0.82rem;
   font-weight: 850;
+}
+
+.event-card__soon > span {
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
 a.event-card__soon:hover {
