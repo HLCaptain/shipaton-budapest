@@ -180,7 +180,9 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
       fallbackOutgoingMotion,
       incomingDuration: incoming.animationDuration,
       outgoingDuration: outgoing.animationDuration,
-      rootAnimation: getComputedStyle(root, "::view-transition-old(root)").animationName
+      rootAnimation: getComputedStyle(root, "::view-transition-old(root)").animationName,
+      transitionName: getComputedStyle(pageContent).viewTransitionName,
+      transitionScope: pageContent.hasAttribute("data-astro-transition-scope")
     };
   });
 
@@ -190,7 +192,9 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
     fallbackOutgoingMotion: ["page-fallback-out", "0.18s"],
     incomingDuration: "0.42s",
     outgoingDuration: "0.18s",
-    rootAnimation: "none"
+    rootAnimation: "none",
+    transitionName: "page-content",
+    transitionScope: false
   });
 
   await page.locator("#events").evaluate((element) => {
@@ -203,7 +207,7 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
       "astro:before-preparation",
       () => {
         (window as Window & { __shipatonMotionSource?: { offset: string; scrollY: number } }).__shipatonMotionSource = {
-          offset: document.documentElement.style.getPropertyValue("--page-old-scroll-offset-y"),
+          offset: getComputedStyle(document.documentElement).getPropertyValue("--page-old-scroll-offset-y").trim(),
           scrollY: window.scrollY
         };
       },
@@ -232,6 +236,37 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
   expect(
     await page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-new(page-content)").animationName)
   ).toBe("none");
+});
+
+test("animates through Astro's non-native fallback", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Fallback navigation is covered once at desktop size");
+  await page.addInitScript(() => {
+    Object.defineProperty(document, "startViewTransition", { configurable: true, value: undefined });
+  });
+  await page.goto("/2026/");
+  await page.evaluate(() => {
+    const state = window as Window & { __shipatonFallbackPhases?: string[][] };
+    state.__shipatonFallbackPhases = [];
+    const root = document.documentElement;
+    new MutationObserver(() => {
+      const phase = root.getAttribute("data-astro-transition-fallback");
+      if (!phase || state.__shipatonFallbackPhases?.some(([recorded]) => recorded === phase)) return;
+      const style = getComputedStyle(document.querySelector(".page-transition")!);
+      state.__shipatonFallbackPhases?.push([phase, style.animationName, style.animationDuration]);
+    }).observe(root, { attributes: true, attributeFilter: ["data-astro-transition-fallback"] });
+  });
+
+  await page.getByRole("link", { name: "Events", exact: true }).click({ noWaitAfter: true });
+  await expect.poll(() => page.evaluate(
+    () => (window as Window & { __shipatonFallbackPhases?: string[][] }).__shipatonFallbackPhases?.length
+  )).toBe(2);
+  expect(await page.evaluate(
+    () => (window as Window & { __shipatonFallbackPhases?: string[][] }).__shipatonFallbackPhases
+  )).toEqual([
+    ["old", "page-fallback-out", "0.18s"],
+    ["new", "page-in", "0.42s"]
+  ]);
+  await expect(page).toHaveURL(/\/2026\/events\/$/);
 });
 
 test("reinitializes page features across repeated client-side visits", async ({ page }) => {

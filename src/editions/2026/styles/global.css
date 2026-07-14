@@ -54,6 +54,15 @@ body::before {
   pointer-events: none;
 }
 
+html[data-astro-transition] {
+  scroll-behavior: auto;
+}
+
+/* Keep this external: Cloudflare's CSP blocks Astro's transition:name style. */
+.page-transition {
+  view-transition-name: page-content;
+}
+
 ::view-transition-old(page-content) {
   animation: page-out 180ms var(--ease) both;
 }

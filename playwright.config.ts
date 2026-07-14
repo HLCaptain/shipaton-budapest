@@ -34,7 +34,7 @@ export default defineConfig({
   webServer: externalBaseURL
     ? undefined
     : {
-        command: `npm run preview -- --host 127.0.0.1 --port ${localPort}`,
+        command: `npx wrangler pages dev dist --ip 127.0.0.1 --port ${localPort}`,
         url: baseURL,
         reuseExistingServer: false
       }
