@@ -108,7 +108,7 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText(
-    "Genesys Cloud Services Hungary Kft. · Budapest, Teréz krt. 55-57, 1062 Hungary"
+    "Genesys Hungary office · Budapest"
   );
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
@@ -175,38 +175,35 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Project Kickoff");
   const facts = page.locator(".event-document__facts");
-  await expect(facts).toContainText("Genesys Cloud Services Hungary Kft. · Budapest, Teréz krt. 55-57, 1062 Hungary");
+  await expect(facts).toContainText("Genesys Hungary office · Budapest");
   await expect(facts).toContainText("17:00–21:00");
-  await expect(facts).toContainText("Mobile development · Team formation · AI-assisted coding");
-  await expect(facts.getByRole("link", { name: /Genesys Cloud Services Hungary/ })).toHaveAttribute(
+  await expect(facts).toContainText("Mobile development · Idea development · Mentoring");
+  await expect(facts.getByRole("link", { name: /Genesys Hungary office/ })).toHaveAttribute(
     "href",
     "https://maps.app.goo.gl/4Qk2mNq2eZ7592NPA"
   );
   await expect(page.getByRole("link", { name: /Reserve a place/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");
   await expect(page.getByRole("link", { name: /^RSVP/ })).toHaveAttribute("href", "https://luma.com/9b5mxujb");
-  await expect(page.locator(".event-schedule > ol > li")).toHaveCount(14);
+  await expect(page.locator(".event-schedule > ol > li")).toHaveCount(7);
   await expect(page.locator(".event-schedule__index")).toHaveCount(0);
   await expect(page.locator(".event-schedule__time")).toHaveText([
     "17:00–17:20",
     "17:20–17:30",
-    "17:30–17:45",
-    "17:45–17:50",
-    "17:50–18:05",
-    "18:05–18:10",
-    "18:10–18:25",
+    "17:30–18:25",
     "18:25–18:40",
-    "18:40–18:50",
-    "18:50–19:05",
-    "19:05–19:15",
-    "19:15–20:35",
-    "20:35–20:50",
-    "20:50–21:00"
+    "18:40–19:10",
+    "19:10–20:45",
+    "20:45–21:00"
   ]);
   await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "What you can expect" })).toHaveAttribute("href", "#what-you-can-expect");
-  await expect(page.locator(".event-document__body")).toContainText("Primary language: English");
+  await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Lightning talks" })).toHaveAttribute("href", "#lightning-talks");
+  await expect(page.locator(".event-document__body")).toContainText("Primary languages: English and Hungarian");
+  const thumbnail = page.getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
+  await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.png");
+  await expect(thumbnail).toHaveAttribute("width", "1254");
+  await expect(thumbnail).toHaveAttribute("height", "1254");
 
   const team = page.locator(".event-people__groups");
   await expect(team.locator("dt")).toHaveText(["Host", "Organizer", "Speakers"]);
@@ -347,7 +344,7 @@ test("reinitializes page features across repeated client-side visits", async ({ 
 
   await page.getByRole("link", { name: "Events", exact: true }).click();
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Copy link to What you can expect" })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Copy link to Lightning talks" })).toHaveCount(1);
 
   await page.getByRole("link", { name: "Back to 2026 events", exact: true }).click();
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
@@ -503,15 +500,15 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
     });
   });
 
-  await page.goto("/2026/events/project-kickoff/#what-you-can-expect");
+  await page.goto("/2026/events/project-kickoff/#lightning-talks");
 
-  const heading = page.getByRole("heading", { name: "What you can expect", exact: true });
-  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#what-you-can-expect$/);
-  await expect(heading).toHaveAttribute("id", "what-you-can-expect");
+  const heading = page.locator(".event-document__body").getByRole("heading", { name: "Lightning talks", exact: true });
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#lightning-talks$/);
+  await expect(heading).toHaveAttribute("id", "lightning-talks");
   await expect(heading).toBeInViewport();
-  const headingRow = page.locator(".event-document__heading-row").filter({ has: heading });
+  const headingRow = heading.locator("..");
   const copy = headingRow.getByRole("button");
-  await expect(copy).toHaveAccessibleName("Copy link to What you can expect");
+  await expect(copy).toHaveAccessibleName("Copy link to Lightning talks");
   expect((await copy.boundingBox())!.x).toBeGreaterThanOrEqual(0);
   const canHover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
   if (canHover && testInfo.project.name === "desktop") {
@@ -527,8 +524,8 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
   await copy.click();
 
   await expect(copy).toHaveAttribute("data-state", "copied");
-  await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to What you can expect.");
-  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/2026\/events\/project-kickoff\/#what-you-can-expect$/);
+  await expect(page.locator("[data-heading-copy-status]")).toHaveText("Copied link to Lightning talks.");
+  await expect.poll(() => page.locator("html").getAttribute("data-copied-heading-link")).toMatch(/\/2026\/events\/project-kickoff\/#lightning-talks$/);
 });
 
 test("selects and extrudes the event without changing its layout footprint", async ({ page }) => {

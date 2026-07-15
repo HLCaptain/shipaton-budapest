@@ -1272,6 +1272,14 @@ a.event-card__soon:hover {
   line-height: 1.62;
 }
 
+.event-document__thumbnail {
+  width: min(100%, 34rem);
+  height: auto;
+  margin: clamp(2rem, 5vw, 3rem) 0;
+  border: 2px solid var(--space);
+  border-radius: var(--radius);
+}
+
 .event-document__body > :where(h2, h3, h4),
 .event-document__heading-row {
   margin: clamp(2.25rem, 5vw, 3.25rem) 0 0.8rem;
