@@ -200,10 +200,34 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Lightning talks" })).toHaveAttribute("href", "#lightning-talks");
   await expect(page.locator(".event-document__body")).toContainText("Primary languages: English and Hungarian");
-  const thumbnail = page.getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
+  const thumbnail = page.locator(".event-document__header").getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
   await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.png");
   await expect(thumbnail).toHaveAttribute("width", "1254");
   await expect(thumbnail).toHaveAttribute("height", "1254");
+  await expect(page.locator(".event-document__body .event-document__thumbnail")).toHaveCount(0);
+
+  const heroCopy = page.locator(".event-document__hero-copy");
+  const resources = page.locator(".event-document__resources");
+  const [thumbnailBox, heroCopyBox, factsBox, resourcesBox] = await Promise.all([
+    thumbnail.boundingBox(),
+    heroCopy.boundingBox(),
+    facts.boundingBox(),
+    resources.boundingBox()
+  ]);
+  expect(thumbnailBox).not.toBeNull();
+  expect(heroCopyBox).not.toBeNull();
+  expect(factsBox).not.toBeNull();
+  expect(resourcesBox).not.toBeNull();
+  expect(Math.abs(thumbnailBox!.width - thumbnailBox!.height)).toBeLessThan(1);
+  expect(thumbnailBox!.y).toBeLessThan(page.viewportSize()!.height);
+  if (page.viewportSize()!.width > 940) {
+    expect(thumbnailBox!.x).toBeGreaterThan(heroCopyBox!.x + heroCopyBox!.width);
+    expect(Math.abs(thumbnailBox!.y - heroCopyBox!.y)).toBeLessThan(1);
+  } else {
+    expect(thumbnailBox!.y + thumbnailBox!.height).toBeLessThan(heroCopyBox!.y);
+    expect(thumbnailBox!.y + thumbnailBox!.height).toBeLessThan(factsBox!.y);
+    expect(thumbnailBox!.y + thumbnailBox!.height).toBeLessThan(resourcesBox!.y);
+  }
 
   const team = page.locator(".event-people__groups");
   await expect(team.locator("dt")).toHaveText(["Host", "Organizer", "Speakers"]);

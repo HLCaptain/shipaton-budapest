@@ -24,6 +24,7 @@ const organizers = event.data.organizers ?? [];
 const speakers = event.data.speakers ?? [];
 const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
+const thumbnail = event.data.thumbnail;
 const date = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -42,9 +43,25 @@ const date = new Intl.DateTimeFormat("en-GB", {
     </button>
 
     <header class="event-document__header">
-      <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
-      <h1>{event.data.title}</h1>
-      <p>{event.data.description}</p>
+      <div class:list={["event-document__hero", { "event-document__hero--with-thumbnail": Boolean(thumbnail) }]}>
+        <div class="event-document__hero-copy">
+          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
+          <h1>{event.data.title}</h1>
+          <p>{event.data.description}</p>
+        </div>
+        {thumbnail && (
+          <img
+            class="event-document__thumbnail"
+            src={thumbnail.src}
+            alt={thumbnail.alt}
+            width={thumbnail.width}
+            height={thumbnail.height}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        )}
+      </div>
       <dl class="event-document__facts">
         <div>
           <dt>Date</dt>

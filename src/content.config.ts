@@ -18,6 +18,12 @@ const events2026 = defineCollection({
     description: z.string(),
     time: z.string(),
     venue: z.string(),
+    thumbnail: z.object({
+      src: z.string(),
+      alt: z.string().min(1),
+      width: z.number().int().positive(),
+      height: z.number().int().positive()
+    }).refine(({ width, height }) => width === height, "Event thumbnails must use a 1:1 aspect ratio").optional(),
     themes: z.array(z.string()).min(1),
     tags: z.array(z.string()).min(1),
     schedule: z.array(z.object({
