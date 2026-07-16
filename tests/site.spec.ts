@@ -510,6 +510,7 @@ test("uses a responsive multi-column dark footer with readable type", async ({ p
 });
 
 test("deep-links to Markdown headings and copies their references", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   if (testInfo.project.name === "tablet") {
     await page.setViewportSize({ width: 640, height: 900 });
   }
@@ -527,13 +528,12 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
   await page.goto("/2026/events/project-kickoff/#lightning-talks");
 
   const heading = page.locator(".event-document__body").getByRole("heading", { name: "Lightning talks", exact: true });
-  await heading.evaluate((element) => element.scrollIntoView({ behavior: "instant" as ScrollBehavior }));
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#lightning-talks$/);
   await expect(heading).toHaveAttribute("id", "lightning-talks");
-  await expect(heading).toBeInViewport();
   const headingRow = heading.locator("..");
   const copy = headingRow.getByRole("button");
   await expect(copy).toHaveAccessibleName("Copy link to Lightning talks");
+  await expect(heading).toBeInViewport();
   expect((await copy.boundingBox())!.x).toBeGreaterThanOrEqual(0);
   const canHover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
   if (canHover && testInfo.project.name === "desktop") {
