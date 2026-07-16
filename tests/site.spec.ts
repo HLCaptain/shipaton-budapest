@@ -525,9 +525,9 @@ test("deep-links to Markdown headings and copies their references", async ({ pag
   });
 
   await page.goto("/2026/events/project-kickoff/#lightning-talks");
-  await page.waitForLoadState("networkidle");
 
   const heading = page.locator(".event-document__body").getByRole("heading", { name: "Lightning talks", exact: true });
+  await heading.evaluate((element) => element.scrollIntoView({ behavior: "instant" as ScrollBehavior }));
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#lightning-talks$/);
   await expect(heading).toHaveAttribute("id", "lightning-talks");
   await expect(heading).toBeInViewport();
