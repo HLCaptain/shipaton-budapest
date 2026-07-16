@@ -1,8 +1,22 @@
 const initEventDocument = () => {
-  const backButton = document.querySelector("[data-history-back]");
-  if (backButton && !backButton.dataset.historyBackBound) {
-    backButton.dataset.historyBackBound = "true";
-    backButton.addEventListener("click", () => history.back());
+  const backLink = document.querySelector("[data-history-back]");
+  if (backLink && !backLink.dataset.historyBackBound) {
+    backLink.dataset.historyBackBound = "true";
+    backLink.addEventListener("click", (event) => {
+      const current = new URL(window.location.href);
+      const target = window.__shipatonBackTarget;
+      const targetUrl = target?.href ? new URL(target.href, current) : null;
+
+      if (!targetUrl || targetUrl.origin !== current.origin || targetUrl.pathname === current.pathname) return;
+
+      event.preventDefault();
+      const currentIndex = history.state?.index;
+      if (Number.isInteger(target.index) && Number.isInteger(currentIndex) && target.index < currentIndex) {
+        history.go(target.index - currentIndex);
+      } else {
+        window.location.assign(targetUrl.href);
+      }
+    });
   }
 
   const article = document.querySelector(".event-document__body");

@@ -113,21 +113,39 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
-test("uses browser history for the detail page's top back button", async ({ page }) => {
+test("skips same-page anchors when using the detail page's top back link", async ({ page }) => {
   await page.goto("/2026/?source=history");
   await page.getByRole("link", { name: "View Project Kickoff event details" }).click();
 
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
-  const backButton = page.getByRole("button", { name: "Back", exact: true });
-  await expect(backButton).toHaveClass(/button--quiet/);
-  await expect(backButton).toHaveClass(/button--compact/);
-  await expect(backButton.locator(".button__icon")).toHaveCount(1);
-  expect(await backButton.evaluate((button) => (
-    button.getBoundingClientRect().width < button.parentElement!.getBoundingClientRect().width
+  const backLink = page.getByRole("link", { name: "Back", exact: true });
+  await expect(backLink).toHaveAttribute("href", "/2026/");
+  await expect(backLink).toHaveClass(/button--quiet/);
+  await expect(backLink).toHaveClass(/button--compact/);
+  await expect(backLink.locator(".button__icon")).toHaveCount(1);
+  expect(await backLink.evaluate((link) => (
+    link.getBoundingClientRect().width < link.parentElement!.getBoundingClientRect().width
   ))).toBe(true);
 
-  await backButton.click();
+  await page.getByRole("navigation", { name: "On this page" })
+    .getByRole("link", { name: "Lightning talks" })
+    .click();
+  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/#lightning-talks$/);
+
+  await backLink.click();
   await expect(page).toHaveURL(/\/2026\/\?source=history$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("A local runway for apps that actually ship.");
+});
+
+test("falls back to the edition home when no earlier internal path is available", async ({ page }) => {
+  await page.goto("/2026/events/project-kickoff/");
+  await page.getByRole("navigation", { name: "On this page" })
+    .getByRole("link", { name: "Lightning talks" })
+    .click();
+
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/\/2026\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("A local runway for apps that actually ship.");
 });
 
 test("publishes the isolated 2026 event routes", async ({ page }) => {

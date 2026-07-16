@@ -35,12 +35,12 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
 <BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
   <main class="event-document" id="main-content">
-    <button class="button button--quiet button--compact event-document__back" type="button" data-history-back>
+    <ButtonLink class="button--compact event-document__back" href="/2026/" data-history-back>
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M13 8H3m0 0 4-4M3 8l4 4" />
       </svg>
       Back
-    </button>
+    </ButtonLink>
 
     <header class="event-document__header">
       <div class:list={["event-document__hero", { "event-document__hero--with-thumbnail": Boolean(thumbnail) }]}>
