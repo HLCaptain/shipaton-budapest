@@ -8,7 +8,7 @@ updates:
       npm-dependencies:
         patterns:
           - "*"
-    # @astrojs/check 0.9.9 supports TypeScript 5 and 6 only.
+    # Remove once @astrojs/check accepts TypeScript 7; 0.9.9 accepts 5 and 6 only.
     ignore:
       - dependency-name: typescript
         versions:
