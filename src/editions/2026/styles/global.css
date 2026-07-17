@@ -575,6 +575,11 @@ svg {
   transition: border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease, translate 180ms ease;
 }
 
+.event-controls[hidden],
+.event-card[hidden] {
+  display: none;
+}
+
 .event-card:only-child {
   cursor: default;
 }
@@ -643,7 +648,9 @@ svg {
   color: rgb(255 250 243 / 0.52);
 }
 
-.event-card time {
+.event-card time,
+.event-card__teaser-kicker {
+  display: block;
   margin-top: clamp(2rem, 5vw, 3.5rem);
   color: var(--orange);
   font-family: var(--font-mono);
@@ -704,6 +711,17 @@ svg {
   font-weight: 700;
 }
 
+.event-card__contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+}
+
+.event-card__contacts a {
+  color: var(--orange);
+  white-space: nowrap;
+}
+
 .person-list__items {
   display: flex;
   margin: 0;
@@ -730,20 +748,14 @@ svg {
 }
 
 .event-card__soon {
-  display: inline-flex;
+  display: inline-block;
   width: fit-content;
   margin-top: 1.4rem;
   align-self: flex-end;
-  align-items: center;
-  gap: 0.4rem;
   color: var(--orange);
   font-size: 0.82rem;
   font-weight: 850;
-}
-
-.event-card__soon > span {
-  font-size: 1.35rem;
-  line-height: 1;
+  white-space: nowrap;
 }
 
 a.event-card__soon:hover {

@@ -1,12 +1,25 @@
 const initEventRail = () => {
   const browser = document.querySelector("[data-event-browser]");
   const track = browser?.querySelector("[data-event-track]");
-  const cards = Array.from(browser?.querySelectorAll("[data-event-card]") ?? []);
+  const teaser = browser?.querySelector("[data-event-teaser]");
+  const teaserDeadline = Date.parse(teaser?.dataset.visibleBefore ?? "");
+  if (teaser) {
+    if (Number.isFinite(teaserDeadline) && Date.now() < teaserDeadline) teaser.hidden = false;
+    else teaser.remove();
+  }
+
+  const cards = Array.from(browser?.querySelectorAll("[data-event-rail-card]") ?? []);
+  const controls = browser?.querySelector("[data-event-controls]");
   const counter = browser?.querySelector("[data-event-counter]");
   const buttons = Array.from(browser?.querySelectorAll("[data-event-direction]") ?? []);
 
   if (!browser || !track || !cards.length || browser.dataset.eventRailBound) return;
   browser.dataset.eventRailBound = "true";
+  if (controls) controls.hidden = cards.length <= 1;
+  cards.forEach((card) => {
+    if (cards.length > 1) card.setAttribute("tabindex", "0");
+    else card.removeAttribute("tabindex");
+  });
 
   const controller = new AbortController();
   const { signal } = controller;
@@ -37,7 +50,8 @@ const initEventRail = () => {
   const restoreSnapping = () => track.style.removeProperty("scroll-snap-type");
 
   cards.forEach((card) => {
-    const date = card.dataset.date ?? "";
+    const date = card.dataset.date;
+    if (!date) return;
     const state = date < today ? "Past" : date === today ? "Today" : "Upcoming";
     card.dataset.state = state.toLowerCase();
     const stateLabel = card.querySelector("[data-event-state]");
@@ -63,7 +77,7 @@ const initEventRail = () => {
     cards.forEach((card, cardIndex) => {
       const selected = cardIndex === activeIndex;
       card.toggleAttribute("data-selected", selected);
-      if (selected) card.setAttribute("aria-current", "date");
+      if (selected) card.setAttribute("aria-current", card.dataset.date ? "date" : "true");
       else card.removeAttribute("aria-current");
     });
     if (counter) counter.value = `${activeIndex + 1} / ${cards.length}`;
@@ -74,7 +88,7 @@ const initEventRail = () => {
     if (scroll) centerCard(cards[activeIndex], true);
   };
 
-  const firstUpcoming = cards.findIndex((card) => (card.dataset.date ?? "") >= today);
+  const firstUpcoming = cards.findIndex((card) => Boolean(card.dataset.date) && card.dataset.date >= today);
   const featuredIndex = firstUpcoming >= 0 ? firstUpcoming : cards.length - 1;
   const featuredCard = cards[featuredIndex];
   const featuredLink = document.querySelector("[data-featured-event]");

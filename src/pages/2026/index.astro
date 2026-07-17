@@ -9,6 +9,7 @@ const events = (await getCollection("events2026")).sort((a, b) => a.data.date.lo
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
 const featuredEvent = events.find(({ data }) => data.date >= today) ?? events.at(-1)!;
 const featuredEventUrl = eventPath(featuredEvent);
+const competitionDeadline = "2026-10-01T06:45:00Z";
 
 const pageTitle = "Shipaton Budapest 2026";
 const description =
@@ -75,29 +76,27 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
       </div>
 
       <div class="event-browser" data-event-browser>
-        {events.length > 1 && (
-          <div class="event-controls" aria-label="Event navigation">
-            <button type="button" data-event-direction="-1" aria-label="Show previous event">
-              <span aria-hidden="true">←</span>
-            </button>
-            <output data-event-counter aria-live="polite">1 / {events.length}</output>
-            <button type="button" data-event-direction="1" aria-label="Show next event">
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
-        )}
+        <div class="event-controls" data-event-controls aria-label="Event navigation" hidden>
+          <button type="button" data-event-direction="-1" aria-label="Show previous event">
+            <span aria-hidden="true">←</span>
+          </button>
+          <output data-event-counter aria-live="polite">1 / {events.length + 1}</output>
+          <button type="button" data-event-direction="1" aria-label="Show next event">
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
 
-        <ol class="event-track" data-event-track aria-label="Shipaton Budapest event dates">
+        <ol class="event-track" data-event-track aria-label="Shipaton Budapest event lineup">
           {events.map(({ id, data: event }) => (
             <li
               class="event-card"
               id={id}
+              data-event-rail-card
               data-event-card
               data-event-url={`/2026/events/${id}/`}
               data-date={event.date}
               data-title={event.title}
               data-venue={event.venue}
-              tabindex={events.length > 1 ? "0" : undefined}
             >
               <div class="event-card__topline">
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
@@ -121,9 +120,48 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                   <PersonList class="event-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
                 )}
               </dl>
-              <a class="event-card__soon" href={`/2026/events/${id}/`}>View event details <span aria-hidden="true">→</span></a>
+              <a class="event-card__soon" href={`/2026/events/${id}/`}>View event details →</a>
             </li>
           ))}
+          <li
+            class="event-card event-card--teaser"
+            data-event-rail-card
+            data-event-teaser
+            data-visible-before={competitionDeadline}
+            hidden
+          >
+            <div class="event-card__topline">
+              <span class="event-card__sequence">Your turn</span>
+              <span class="event-card__state">Ideas welcome</span>
+            </div>
+            <span class="event-card__teaser-kicker">Not organized yet</span>
+            <h3>What should happen next?</h3>
+            <p class="event-card__format">Potential Shipaton Budapest event</p>
+            <p class="event-card__description">
+              Share your Shipaton Budapest experience—or tell Balázs what you would like to see at an upcoming event.
+            </p>
+            <dl>
+              <div>
+                <dt>Status</dt>
+                <dd>Waiting for your ideas</dd>
+              </div>
+              <div>
+                <dt>Reach Balázs</dt>
+                <dd class="event-card__contacts">
+                  <a href="https://x.com/hlcaptain" target="_blank" rel="noopener noreferrer">
+                    X <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/balazs-puspok-kiss"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    LinkedIn <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          </li>
         </ol>
       </div>
 

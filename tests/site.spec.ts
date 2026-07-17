@@ -1,18 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const freezeDate = async (page: Page, isoDate: string) => {
-  const now = JSON.stringify(isoDate);
-  await page.addInitScript({
-    content: `{
-      const RealDate = Date;
-      const fixedTime = RealDate.parse(${now});
-      class FixedDate extends RealDate {
-        constructor(...args) { super(...(args.length ? args : [fixedTime])); }
-        static now() { return fixedTime; }
-      }
-      globalThis.Date = FixedDate;
-    }`
-  });
+  await page.clock.setFixedTime(isoDate);
 };
 
 test.beforeEach(async ({ page }) => {
@@ -38,7 +27,10 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("local runway");
   const event = page.locator('[data-event-card][data-date="2026-08-04"]');
+  const teaser = page.locator("[data-event-teaser]");
+  await expect(page.locator("[data-event-rail-card]")).toHaveCount(2);
   await expect(page.locator("[data-event-card]")).toHaveCount(1);
+  await expect(teaser).toBeVisible();
   await expect(event).toHaveAttribute("aria-current", "date");
   await expect(event.locator("[data-event-state]")).toHaveText("Upcoming");
   await expect(event.locator('[data-event-people="hosts"]')).toContainText("Balázs Püspök-Kiss");
@@ -49,9 +41,10 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
   ]);
   if (page.viewportSize()!.width > 620) await expect(event.locator('[data-event-people="speakers"]')).toBeVisible();
   else await expect(event.locator('[data-event-people="speakers"]')).toBeHidden();
-  await expect(event).not.toHaveAttribute("tabindex");
-  await expect(event).toHaveCSS("cursor", "default");
-  await expect(page.locator(".event-controls")).toHaveCount(0);
+  await expect(event).toHaveAttribute("tabindex", "0");
+  await expect(event).toHaveCSS("cursor", "pointer");
+  await expect(page.locator(".event-controls")).toBeVisible();
+  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
   const ctaLayout = await event.getByRole("link", { name: "View event details" }).evaluate((link) => {
     const card = link.closest<HTMLElement>("[data-event-card]")!;
     const cardBox = card.getBoundingClientRect();
@@ -60,17 +53,55 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
     return {
       bottomInset: cardBox.bottom - linkBox.bottom,
       bottomPadding: Number.parseFloat(cardStyle.paddingBottom),
-      linkFontSize: Number.parseFloat(getComputedStyle(link).fontSize),
+      childElementCount: link.childElementCount,
       rightInset: cardBox.right - linkBox.right,
       rightPadding: Number.parseFloat(cardStyle.paddingRight),
-      arrowFontSize: Number.parseFloat(getComputedStyle(link.querySelector("span")!).fontSize)
+      text: link.textContent,
+      whiteSpace: getComputedStyle(link).whiteSpace
     };
   });
   expect(Math.abs(ctaLayout.rightInset - ctaLayout.rightPadding)).toBeLessThan(3);
   expect(Math.abs(ctaLayout.bottomInset - ctaLayout.bottomPadding)).toBeLessThan(3);
-  expect(ctaLayout.arrowFontSize).toBeGreaterThan(ctaLayout.linkFontSize);
+  expect(ctaLayout.childElementCount).toBe(0);
+  expect(ctaLayout.text).toBe("View event details →");
+  expect(ctaLayout.whiteSpace).toBe("nowrap");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   expect(consoleErrors).toEqual([]);
+});
+
+test("invites ideas for a potential event before the competition deadline", async ({ page }) => {
+  await page.goto("/2026/");
+
+  const teaser = page.locator("[data-event-teaser]");
+  await expect(teaser).toBeVisible();
+  await expect(teaser).not.toHaveAttribute("data-event-card");
+  await expect(teaser.getByRole("heading", { name: "What should happen next?" })).toBeVisible();
+  await expect(teaser).toContainText("Not organized yet");
+  await expect(teaser).toContainText("Share your Shipaton Budapest experience");
+  await expect(teaser.getByRole("link", { name: /^X / })).toHaveAttribute("href", "https://x.com/hlcaptain");
+  await expect(teaser.getByRole("link", { name: /^LinkedIn / })).toHaveAttribute(
+    "href",
+    "https://www.linkedin.com/in/balazs-puspok-kiss"
+  );
+  for (const link of await teaser.getByRole("link").all()) {
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /\bnoopener\b/);
+    await expect(link).toHaveAttribute("rel", /\bnoreferrer\b/);
+  }
+  await expect(teaser.getByRole("link", { name: /View event details/i })).toHaveCount(0);
+});
+
+test("removes the potential event at the competition deadline", async ({ page }) => {
+  await freezeDate(page, "2026-10-01T06:45:00Z");
+  await page.goto("/2026/");
+
+  const event = page.locator('[data-event-card][data-date="2026-08-04"]');
+  await expect(page.locator("[data-event-teaser]")).toHaveCount(0);
+  await expect(page.locator("[data-event-rail-card]")).toHaveCount(1);
+  await expect(page.locator(".event-controls")).toBeHidden();
+  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 1");
+  await expect(event).not.toHaveAttribute("tabindex");
+  await expect(event).toHaveCSS("cursor", "default");
 });
 
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
@@ -449,7 +480,8 @@ test("reinitializes page features across repeated client-side visits", async ({ 
     await page.evaluate(() => (window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker)
   ).toBe("alive");
   await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-04");
-  await expect(page.locator(".event-controls")).toHaveCount(0);
+  await expect(page.locator(".event-controls")).toBeVisible();
+  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
 });
 
 test("keeps the event detail body aligned with a responsive table of contents", async ({ page }) => {
@@ -543,6 +575,13 @@ test("keeps Budapest beside the brand and exposes contact links", async ({ page 
   await expect(footer.getByRole("heading", { name: "Contact" })).toBeVisible();
   const githubLink = footer.getByRole("link", { name: "GitHub", exact: true });
   await expect(githubLink).toHaveAttribute("href", "https://github.com/HLCaptain");
+  const repositoryLink = footer.getByRole("navigation", { name: "Explore" }).getByRole("link", {
+    name: /GitHub repository/
+  });
+  await expect(repositoryLink).toHaveAttribute("href", "https://github.com/HLCaptain/shipaton-budapest");
+  await expect(repositoryLink).toHaveAttribute("target", "_blank");
+  await expect(repositoryLink).toHaveAttribute("rel", /\bnoopener\b/);
+  await expect(repositoryLink).toHaveAttribute("rel", /\bnoreferrer\b/);
   await expect(footer.getByRole("link", { name: "X", exact: true })).toHaveAttribute("href", "https://x.com/hlcaptain");
   await expect(footer.locator(".social-link svg")).toHaveCount(2);
   await expect(footer).not.toContainText(/\bfour\b|@hlcaptain|Official media-kit assets/i);
