@@ -79,16 +79,22 @@ test("smoothly settles an interrupted event-card drag", async ({ page }, testInf
   await page.mouse.move(trackBox!.x + trackBox!.width / 2, trackBox!.y + trackBox!.height / 2);
   await page.mouse.down();
 
-  const finalTarget = await track.evaluate((element) => {
+  await track.evaluate((element) => {
     const cards = [...element.querySelectorAll<HTMLElement>("[data-event-rail-card]")];
     const card = cards.at(-1)!;
     const margin = Number.parseFloat(getComputedStyle(card).scrollMarginInlineStart) || 0;
     const left = card.offsetLeft - (element.clientWidth - card.offsetWidth) / 2 - margin / 2;
     const target = Math.max(0, Math.min(left, element.scrollWidth - element.clientWidth));
     element.scrollLeft = target - 200;
-    return target;
   });
   await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
+
+  const finalTarget = await track.evaluate((element) => {
+    const card = element.querySelector<HTMLElement>("[data-selected]")!;
+    const margin = Number.parseFloat(getComputedStyle(card).scrollMarginInlineStart) || 0;
+    const left = card.offsetLeft - (element.clientWidth - card.offsetWidth) / 2 - margin / 2;
+    return Math.max(0, Math.min(left, element.scrollWidth - element.clientWidth));
+  });
 
   await page.evaluate(() => {
     const state = window as Window & { __eventRailSamples?: number[] };
@@ -98,7 +104,7 @@ test("smoothly settles an interrupted event-card drag", async ({ page }, testInf
       state.__eventRailSamples!.push(track.scrollLeft);
       if (state.__eventRailSamples!.length < 12) requestAnimationFrame(sample);
     };
-    requestAnimationFrame(sample);
+    window.addEventListener("pointerup", () => requestAnimationFrame(sample), { once: true });
   });
   await page.mouse.up();
 
