@@ -393,9 +393,11 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
 
   const railLayout = await rail.evaluate((list) => {
     const boxes = [...list.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
+    const sectionBox = list.closest(".event-venue")!.getBoundingClientRect();
     return {
       display: getComputedStyle(list).display,
       documentOverflow: document.documentElement.scrollWidth > window.innerWidth,
+      edgeAligned: Math.abs(boxes[0].left - sectionBox.left) < 1,
       overflowX: getComputedStyle(list).overflowX,
       sameRow: boxes.every(({ y }) => Math.abs(y - boxes[0].y) < 1),
       scrollable: list.scrollWidth > list.clientWidth
@@ -404,6 +406,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   expect(railLayout).toEqual({
     display: "flex",
     documentOverflow: false,
+    edgeAligned: true,
     overflowX: "auto",
     sameRow: true,
     scrollable: true
@@ -415,20 +418,37 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     await expect.poll(() => opener.evaluate((button) => (
       Math.abs(Number.parseFloat(getComputedStyle(button).translate))
     ))).toBeGreaterThan(1);
+    await expect(opener).toHaveCSS("background-color", "rgb(255, 129, 0)");
+    await expect(opener).toHaveCSS("border-color", "rgb(255, 129, 0)");
     const hoverStyle = await opener.evaluate((button) => {
       const railStyle = getComputedStyle(button.closest("[aria-label='Venue photos']")!);
+      const railBox = button.closest("[aria-label='Venue photos']")!.getBoundingClientRect();
       const style = getComputedStyle(button);
+      const buttonBox = button.getBoundingClientRect();
       const extrusion = Math.abs(Number.parseFloat(style.translate));
       return {
+        background: style.backgroundColor,
+        border: style.borderColor,
         boxShadow: style.boxShadow,
+        effectInsideRail: buttonBox.left - 4 >= railBox.left
+          && buttonBox.top - 4 >= railBox.top
+          && buttonBox.right + extrusion <= railBox.right
+          && buttonBox.bottom + extrusion <= railBox.bottom,
         hasEdgeClearance: Number.parseFloat(railStyle.paddingTop) >= extrusion + 6
           && Number.parseFloat(railStyle.paddingLeft) >= extrusion + 6,
         translate: style.translate
       };
     });
+    expect(hoverStyle.background).toBe("rgb(255, 129, 0)");
+    expect(hoverStyle.border).toBe("rgb(255, 129, 0)");
     expect(hoverStyle.boxShadow).not.toBe("none");
+    expect(hoverStyle.effectInsideRail).toBe(true);
     expect(hoverStyle.hasEdgeClearance).toBe(true);
     expect(hoverStyle.translate).not.toBe("none");
+
+    await page.mouse.move(0, 0);
+    await opener.focus();
+    await expect(opener).toHaveCSS("outline-color", "rgb(255, 129, 0)");
   }
 
   await opener.click();
@@ -437,7 +457,10 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   const caption = dialog.locator("[data-venue-caption]");
   const picture = dialog.getByRole("button", { name: "Zoom in on venue photo" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Close venue photo preview" })).toBeVisible();
+  await expect(dialog).toHaveCSS("opacity", "1");
+  await expect(dialog).toHaveCSS("scale", "1");
+  const close = dialog.getByRole("button", { name: "Close venue photo preview" });
+  await expect(close).toHaveCount(1);
   await expect(preview).toHaveAttribute("src", sources[0]);
   await expect(dialog.locator("[data-venue-counter], [data-venue-zoom], [data-venue-details]")).toHaveCount(0);
   const controls = dialog.getByRole("group", { name: "Venue photo controls" });
@@ -445,7 +468,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   await expect(controls.getByRole("button", { name: /zoom|details/i })).toHaveCount(0);
   await expect(dialog.getByText(/^\d+\s*\/\s*\d+$/)).toHaveCount(0);
   await expect(dialog.getByText(descriptions[0], { exact: true })).toBeVisible();
-  await expect(caption).toHaveCSS("background-color", "rgb(13, 10, 22)");
+  await expect(caption).toHaveCSS("background-color", "rgba(13, 10, 22, 0.72)");
   await expect(caption).toHaveCSS("color", "rgb(255, 250, 243)");
   expect(await preview.evaluate((image) => {
     const source = image as HTMLImageElement;
@@ -455,17 +478,82 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
 
   const previous = controls.getByRole("button", { name: "Previous venue photo" });
   const next = controls.getByRole("button", { name: "Next venue photo" });
-  const [shellBox, previousBox, nextBox] = await Promise.all([
-    dialog.locator(".venue-preview__shell").boundingBox(),
+  const [dialogBox, previewBoxBeforeZoom, captionBox, closeBox, previousBox, nextBox] = await Promise.all([
+    dialog.boundingBox(),
+    preview.boundingBox(),
+    caption.boundingBox(),
+    close.boundingBox(),
     previous.boundingBox(),
     next.boundingBox()
   ]);
-  expect(previousBox!.x).toBeGreaterThan(shellBox!.x + shellBox!.width / 2);
-  expect(previousBox!.x).toBeLessThan(nextBox!.x);
-  expect(Math.abs(previousBox!.y - nextBox!.y)).toBeLessThan(2);
-  const controlsRightGap = shellBox!.x + shellBox!.width - nextBox!.x - nextBox!.width;
-  expect(controlsRightGap).toBeGreaterThanOrEqual(0);
-  expect(controlsRightGap).toBeLessThan(24);
+  const dialogTreatment = await dialog.evaluate((element) => {
+    const image = element.querySelector<HTMLElement>("[data-venue-preview-image]")!;
+    const imageBox = image.getBoundingClientRect();
+    const box = element.getBoundingClientRect();
+    const pictureStyle = getComputedStyle(element.querySelector("[data-venue-picture]")!);
+    const style = getComputedStyle(element);
+    return {
+      borderRadius: Number.parseFloat(style.borderTopLeftRadius),
+      fillsViewport: Math.min(
+        Math.abs(box.width - (window.innerWidth - 16)),
+        Math.abs(box.height - (window.innerHeight - 16))
+      ) < 2,
+      imageInset: Math.max(
+        Math.abs(imageBox.left - box.left),
+        Math.abs(imageBox.top - box.top),
+        Math.abs(imageBox.right - box.right),
+        Math.abs(imageBox.bottom - box.bottom)
+      ),
+      picturePadding: [
+        pictureStyle.paddingTop,
+        pictureStyle.paddingRight,
+        pictureStyle.paddingBottom,
+        pictureStyle.paddingLeft
+      ],
+      ratioError: Math.abs(box.width / box.height - imageBox.width / imageBox.height)
+    };
+  });
+  expect(dialogTreatment.borderRadius).toBeGreaterThan(0);
+  expect(dialogTreatment.fillsViewport).toBe(true);
+  expect(dialogTreatment.imageInset).toBeLessThan(1);
+  expect(dialogTreatment.picturePadding).toEqual(["0px", "0px", "0px", "0px"]);
+  expect(dialogTreatment.ratioError).toBeLessThan(0.01);
+
+  const imageCenterY = previewBoxBeforeZoom!.y + previewBoxBeforeZoom!.height / 2;
+  expect(Math.abs(previousBox!.y + previousBox!.height / 2 - imageCenterY)).toBeLessThan(2);
+  expect(Math.abs(nextBox!.y + nextBox!.height / 2 - imageCenterY)).toBeLessThan(2);
+  expect(previousBox!.x - previewBoxBeforeZoom!.x).toBeGreaterThanOrEqual(0);
+  expect(previousBox!.x - previewBoxBeforeZoom!.x).toBeLessThan(16);
+  expect(previewBoxBeforeZoom!.x + previewBoxBeforeZoom!.width - nextBox!.x - nextBox!.width).toBeLessThan(16);
+  expect(Math.abs(captionBox!.y + captionBox!.height - previewBoxBeforeZoom!.y - previewBoxBeforeZoom!.height)).toBeLessThan(2);
+  expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width);
+  expect(closeBox!.y).toBeGreaterThanOrEqual(dialogBox!.y);
+  await expect(close).toHaveCSS("background-color", "rgba(13, 10, 22, 0.68)");
+  await expect(previous).toHaveCSS("background-color", "rgba(13, 10, 22, 0.68)");
+  await expect(controls).toHaveCSS("position", "absolute");
+  await expect(caption).toHaveCSS("position", "absolute");
+
+  const canHover = await page.evaluate(() => matchMedia("(hover: hover)").matches);
+  if (canHover) {
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await expect(caption).toHaveCSS("opacity", "0");
+    await expect(close).toHaveCSS("opacity", "0");
+    await expect(controls).toHaveCSS("opacity", "0");
+    await picture.hover({
+      position: {
+        x: Math.round(previewBoxBeforeZoom!.width / 2),
+        y: Math.round(previewBoxBeforeZoom!.height / 2)
+      }
+    });
+    await expect(caption).toHaveCSS("opacity", "1");
+    await expect(close).toHaveCSS("opacity", "1");
+    await expect(controls).toHaveCSS("opacity", "1");
+  } else {
+    await expect(caption).toHaveCSS("opacity", "1");
+    await expect(close).toHaveCSS("opacity", "1");
+    await expect(controls).toHaveCSS("opacity", "1");
+  }
 
   const previewBox = await preview.boundingBox();
   const zoomPoint = {
@@ -548,10 +636,18 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     await client.detach();
   }
 
-  await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
+  await close.click();
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
   await opener.click();
+  await expect(dialog).toBeVisible();
+  await expect(preview).not.toHaveAttribute("data-venue-transition");
+  await page.mouse.click(1, 1);
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await expect(dialog).toBeVisible();
+  await expect(preview).not.toHaveAttribute("data-venue-transition");
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
@@ -571,14 +667,37 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     return {
       backdrop: duration(getComputedStyle(element, "::backdrop").transitionDuration),
       dialog: duration(getComputedStyle(element).transitionDuration),
+      shared: duration(getComputedStyle(document.documentElement, "::view-transition-group(venue-photo)").animationDuration),
       zoom: duration(getComputedStyle(element.querySelector("[data-venue-preview-image]")!).transitionDuration)
     };
   });
   expect(transitionMs.dialog).toBeGreaterThanOrEqual(200);
   expect(transitionMs.backdrop).toBeGreaterThanOrEqual(200);
+  expect(transitionMs.shared).toBeGreaterThanOrEqual(300);
   expect(transitionMs.zoom).toBeGreaterThanOrEqual(250);
 
+  const supportsSharedTransition = await page.evaluate(() => {
+    const start = document.startViewTransition?.bind(document);
+    if (!start) return false;
+    document.startViewTransition = (options) => {
+      const update = typeof options === "function" ? options : options?.update;
+      document.documentElement.dataset.venueTransitionOld = String(Boolean(
+        document.querySelector("[data-venue-photo] img[data-venue-transition]")
+      ));
+      return start(async () => {
+        await update?.();
+        document.documentElement.dataset.venueTransitionNew = String(Boolean(
+          document.querySelector("[data-venue-preview-image][data-venue-transition]")
+        ));
+      });
+    };
+    return true;
+  });
   await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  if (supportsSharedTransition) {
+    await expect(page.locator("html")).toHaveAttribute("data-venue-transition-old", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-venue-transition-new", "true");
+  }
   expect(await dialog.evaluate((element) => element.getAnimations().some((animation) => (
     Number(animation.effect?.getTiming().duration) >= 200
   )))).toBe(true);
@@ -599,6 +718,10 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   await expect(dialog).toBeHidden();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.locator("html").evaluate((element) => {
+    delete element.dataset.venueTransitionOld;
+    delete element.dataset.venueTransitionNew;
+  });
   const reducedTransitionMs = await dialog.evaluate((element) => {
     const duration = (target: Element) => {
       const time = getComputedStyle(target).transitionDuration;
@@ -612,6 +735,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   expect(reducedTransitionMs.dialog).toBeLessThanOrEqual(0.01);
   expect(reducedTransitionMs.image).toBeLessThanOrEqual(0.01);
   await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-venue-transition-old");
+  await expect(page.locator("html")).not.toHaveAttribute("data-venue-transition-new");
   await dialog.getByRole("button", { name: "Next venue photo" }).click();
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute(
     "src",

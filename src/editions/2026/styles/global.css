@@ -1100,12 +1100,13 @@ a.event-card__soon:hover {
 
 .event-venue__rail {
   display: flex;
-  margin: 0;
+  margin: -1rem;
   padding: 1rem;
   gap: 1rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-color: var(--orange-dark) var(--line);
+  scroll-padding-inline: 1rem;
   scroll-snap-type: x mandatory;
   list-style: none;
 }
@@ -1127,7 +1128,7 @@ a.event-card__soon:hover {
   border: 2px solid var(--space);
   border-radius: var(--radius);
   background: var(--space);
-  transition: border-color 180ms ease, box-shadow 180ms ease, translate 180ms ease;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, translate 180ms ease;
 }
 
 .event-venue__thumbnail img {
@@ -1138,7 +1139,9 @@ a.event-card__soon:hover {
 
 .event-venue__thumbnail:focus-visible {
   border-color: var(--orange);
+  background: var(--orange);
   box-shadow: var(--extrusion-shadow);
+  outline-color: var(--orange);
   outline-offset: 3px;
   translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
 }
@@ -1146,20 +1149,35 @@ a.event-card__soon:hover {
 @media (hover: hover) {
   .event-venue__thumbnail:hover {
     border-color: var(--orange);
+    background: var(--orange);
     box-shadow: var(--extrusion-shadow);
     translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
   }
 }
 
+[data-venue-transition] {
+  view-transition-name: venue-photo;
+}
+
+::view-transition-group(venue-photo) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease);
+}
+
 .venue-preview {
-  width: min(80rem, calc(100% - 2rem));
+  --venue-preview-ratio: 1.5;
+  width: min(
+    calc(100vw - 1rem),
+    calc((100dvh - 1rem) * var(--venue-preview-ratio))
+  );
   max-width: none;
-  height: min(54rem, calc(100dvh - 2rem));
+  height: auto;
   max-height: none;
+  aspect-ratio: var(--venue-preview-ratio);
   margin: auto;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgb(255 250 243 / 0.35);
+  border: 0;
   border-radius: var(--radius);
   background: var(--space);
   color: var(--paper);
@@ -1211,13 +1229,14 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview__shell {
-  display: grid;
+  position: relative;
   height: 100%;
-  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .venue-preview__viewer {
   position: relative;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -1238,7 +1257,7 @@ body:has(.venue-preview[open]) {
   min-width: 100%;
   height: 100%;
   min-height: 100%;
-  padding: 1rem;
+  padding: 0;
   place-items: center;
   border: 0;
   background: transparent;
@@ -1254,10 +1273,11 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview__image {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: calc(100dvh - 9rem);
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
   pointer-events: none;
   transform: scale(1);
   transform-origin: var(--venue-zoom-x, 50%) var(--venue-zoom-y, 50%);
@@ -1276,16 +1296,17 @@ body:has(.venue-preview[open]) {
 .venue-preview__caption {
   position: absolute;
   z-index: 2;
-  right: 1rem;
-  bottom: 1rem;
-  left: 1rem;
-  max-width: 52rem;
+  right: auto;
+  bottom: 0;
+  left: 0;
+  max-width: min(52rem, 100%);
   padding: 0.85rem 1rem;
   border: 1px solid rgb(255 250 243 / 0.2);
-  border-radius: 7px;
-  background: rgb(13 10 22);
+  border-radius: 0 7px 0 0;
+  background: rgb(13 10 22 / 0.72);
   color: var(--paper);
   pointer-events: none;
+  transition: opacity 160ms ease;
 }
 
 .venue-preview__caption p {
@@ -1297,8 +1318,8 @@ body:has(.venue-preview[open]) {
 .venue-preview__close {
   position: absolute;
   z-index: 4;
-  top: 1rem;
-  right: 1rem;
+  top: 0.5rem;
+  right: 0.5rem;
   display: grid;
   width: 2.75rem;
   height: 2.75rem;
@@ -1306,9 +1327,9 @@ body:has(.venue-preview[open]) {
   place-items: center;
   border: 1px solid rgb(255 250 243 / 0.55);
   border-radius: 50%;
-  background: rgb(13 10 22 / 0.9);
+  background: rgb(13 10 22 / 0.68);
   color: var(--paper);
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
 }
 
 .venue-preview__close:hover {
@@ -1326,22 +1347,31 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview__controls {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  right: 0.5rem;
+  left: 0.5rem;
   display: flex;
-  padding: 0.75rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  border-top: 1px solid rgb(255 250 243 / 0.2);
-  background: var(--space);
+  padding: 0;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 160ms ease;
 }
 
 .venue-preview__controls .button {
   width: 2.75rem;
+  height: 2.75rem;
   min-height: 2.7rem;
   padding: 0;
+  border-radius: 50%;
   border-color: rgb(255 250 243 / 0.45);
-  background: rgb(255 250 243 / 0.08);
+  background: rgb(13 10 22 / 0.68);
   color: var(--paper);
+  pointer-events: auto;
 }
 
 .venue-preview :focus-visible {
@@ -1349,6 +1379,25 @@ body:has(.venue-preview[open]) {
 }
 
 @media (hover: hover) {
+  .venue-preview__caption,
+  .venue-preview__close,
+  .venue-preview__controls {
+    opacity: 0;
+  }
+
+  .venue-preview__shell:hover :is(
+    .venue-preview__caption,
+    .venue-preview__close,
+    .venue-preview__controls
+  ),
+  .venue-preview:has(:focus-visible) :is(
+    .venue-preview__caption,
+    .venue-preview__close,
+    .venue-preview__controls
+  ) {
+    opacity: 1;
+  }
+
   .venue-preview__controls .button:hover {
     border-color: var(--orange);
     color: var(--orange);
@@ -2054,21 +2103,6 @@ body:has(.venue-preview[open]) {
 
   .event-document__facts > div:last-child {
     border-bottom: 0;
-  }
-
-  .venue-preview {
-    width: calc(100% - 1rem);
-    height: calc(100dvh - 1rem);
-  }
-
-  .venue-preview__picture {
-    padding: 0.5rem;
-  }
-
-  .venue-preview__caption {
-    right: 0.5rem;
-    bottom: 0.5rem;
-    left: 0.5rem;
   }
 
   .site-footer__grid {

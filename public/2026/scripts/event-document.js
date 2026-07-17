@@ -16,8 +16,23 @@ const initVenueGallery = () => {
   let currentIndex = 0;
   let opener;
   let gesture;
+  let previewRule;
   let suppressClick = false;
   let zoomTimer;
+
+  const setPreviewRatio = (width, height) => {
+    if (!previewRule) {
+      for (const sheet of document.styleSheets) {
+        try {
+          previewRule = Array.from(sheet.cssRules).find(
+            (rule) => rule instanceof CSSStyleRule && rule.selectorText === ".venue-preview"
+          );
+        } catch {}
+        if (previewRule) break;
+      }
+    }
+    previewRule?.style.setProperty("--venue-preview-ratio", String(width / height));
+  };
 
   const resetGesture = () => {
     const pointerId = gesture?.id;
@@ -52,12 +67,15 @@ const initVenueGallery = () => {
 
   const renderPhoto = (index) => {
     const photo = photos[index];
+    const width = Number(photo.dataset.width);
+    const height = Number(photo.dataset.height);
     currentIndex = index;
     image.src = photo.dataset.src;
     image.alt = photo.dataset.alt;
-    image.width = Number(photo.dataset.width);
-    image.height = Number(photo.dataset.height);
+    image.width = width;
+    image.height = height;
     description.textContent = photo.dataset.description;
+    setPreviewRatio(width, height);
     setZoom(false);
   };
 
@@ -92,12 +110,27 @@ const initVenueGallery = () => {
     resetGesture();
     opener = photo;
     renderPhoto(index);
-    dialog.showModal();
+    const thumbnail = photo.querySelector("img");
+    if (reducedMotion.matches || !document.startViewTransition || !thumbnail) {
+      dialog.showModal();
+      return;
+    }
+
+    thumbnail.dataset.venueTransition = "";
+    const transition = document.startViewTransition(() => {
+      delete thumbnail.dataset.venueTransition;
+      image.dataset.venueTransition = "";
+      dialog.showModal();
+    });
+    transition.finished.finally(() => delete image.dataset.venueTransition);
   }));
 
   dialog.querySelector("[data-venue-close]").addEventListener("click", () => dialog.close());
   dialog.querySelector("[data-venue-previous]").addEventListener("click", () => move(-1));
   dialog.querySelector("[data-venue-next]").addEventListener("click", () => move(1));
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
 
   picture.addEventListener("click", (event) => {
     if (suppressClick) {
@@ -179,6 +212,7 @@ const initVenueGallery = () => {
 
   dialog.addEventListener("close", () => {
     picture.getAnimations().forEach((animation) => animation.cancel());
+    delete image.dataset.venueTransition;
     resetGesture();
     setZoom(false);
     opener?.focus();
