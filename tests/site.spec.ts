@@ -14,7 +14,7 @@ test("redirects the root to the current edition", async ({ page }) => {
   await expect(page).toHaveURL(/\/2026\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring what you’re building");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
 });
 
 test("opens on the confirmed event without redundant navigation", async ({ page }) => {
@@ -25,7 +25,7 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
 
   await page.goto("/2026/");
 
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring what you’re building");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
   const event = page.locator('[data-event-card][data-date="2026-08-04"]');
   const teaser = page.locator("[data-event-teaser]");
   await expect(page.locator("[data-event-rail-card]")).toHaveCount(2);
@@ -110,7 +110,7 @@ test("keeps content inside the viewport and exposes the important links", async 
   await page.goto("/2026/");
 
   await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute("href", "/2026/events/");
-  await expect(page.getByRole("link", { name: "See the event" })).toHaveAttribute("href", "#events");
+  await expect(page.getByRole("link", { name: "See the next event" })).toHaveAttribute("href", "#events");
   await expect(page.getByRole("link", { name: /Join Shipaton/ })).toHaveAttribute(
     "href",
     "https://revenuecat-shipaton-2026.devpost.com/"
@@ -167,7 +167,7 @@ test("skips same-page anchors when using the detail page's top back link", async
 
   await backLink.click();
   await expect(page).toHaveURL(/\/2026\/\?source=history$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bring what you’re building. Let’s move it forward.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Move your app forward in good company.");
 });
 
 test("falls back to the edition home when no earlier internal path is available", async ({ page }) => {
@@ -178,7 +178,7 @@ test("falls back to the edition home when no earlier internal path is available"
 
   await page.getByRole("link", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(/\/2026\/$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bring what you’re building. Let’s move it forward.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Move your app forward in good company.");
 });
 
 test("publishes the isolated 2026 event routes", async ({ page }) => {
@@ -705,7 +705,7 @@ test("gives clickable backdrops the right hover color", async ({ page }, testInf
 
   for (const { backdrop, color } of [
     {
-      backdrop: page.getByRole("link", { name: "See the event" }).locator(".button--primary"),
+      backdrop: page.getByRole("link", { name: "See the next event" }).locator(".button--primary"),
       color: "rgb(23, 19, 38)"
     },
     {
@@ -744,7 +744,7 @@ test("gives clickable backdrops the right hover color", async ({ page }, testInf
   await expect(heroCaption).toHaveCSS("background-color", "rgb(23, 19, 38)");
   await expect(heroCaption.locator("[data-featured-title]")).toHaveCSS("color", "rgb(255, 129, 0)");
 
-  const primary = page.getByRole("link", { name: "See the event" });
+  const primary = page.getByRole("link", { name: "See the next event" });
   await page.mouse.move(0, 0);
   const primaryBox = await primary.boundingBox();
   expect(primaryBox).not.toBeNull();
