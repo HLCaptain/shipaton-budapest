@@ -142,14 +142,20 @@ const date = new Intl.DateTimeFormat("en-GB", {
           </ul>
         </section>
 
-        <dialog class="venue-preview" aria-labelledby="venue-preview-title" data-venue-dialog>
+        <dialog
+          class="venue-preview"
+          aria-labelledby="venue-preview-title"
+          aria-describedby="venue-preview-caption"
+          data-venue-dialog
+        >
+          <button class="venue-preview__close" type="button" aria-label="Close venue photo preview" data-venue-close autofocus>
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M3 3l10 10M13 3 3 13" />
+            </svg>
+          </button>
+
           <div class="venue-preview__shell">
             <h2 class="visually-hidden" id="venue-preview-title">Venue photo preview</h2>
-            <button class="venue-preview__close" type="button" aria-label="Close venue photo preview" data-venue-close autofocus>
-              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                <path d="M3 3l10 10M13 3 3 13" />
-              </svg>
-            </button>
 
             <figure class="venue-preview__viewer">
               <div class="venue-preview__viewport" data-venue-viewport>

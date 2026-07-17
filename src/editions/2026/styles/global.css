@@ -1159,9 +1159,54 @@ a.event-card__soon:hover {
   view-transition-name: venue-photo;
 }
 
+:root[data-venue-transitioning]::view-transition {
+  background: rgb(10 7 17);
+  animation: none;
+}
+
+:root[data-venue-transitioning="open"]::view-transition-old(root),
+:root[data-venue-transitioning="open"]::view-transition-old(page-content) {
+  animation: venue-page-dim 320ms var(--ease) both;
+}
+
+:root[data-venue-transitioning="open"]::view-transition-new(root),
+:root[data-venue-transitioning="open"]::view-transition-new(page-content),
+:root[data-venue-transitioning="close"]::view-transition-old(root),
+:root[data-venue-transitioning="close"]::view-transition-old(page-content) {
+  animation: none;
+  opacity: 0;
+}
+
+:root[data-venue-transitioning="close"]::view-transition-new(root),
+:root[data-venue-transitioning="close"]::view-transition-new(page-content) {
+  animation: venue-page-reveal 320ms var(--ease) both;
+}
+
 ::view-transition-group(venue-photo) {
+  z-index: 2;
   animation-duration: 320ms;
   animation-timing-function: var(--ease);
+}
+
+::view-transition-group(venue-close) {
+  z-index: 3;
+  animation-duration: 320ms;
+}
+
+:root[data-venue-transitioning="open"]::view-transition-new(venue-close),
+:root[data-venue-transitioning="close"]::view-transition-old(venue-close) {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes venue-page-dim {
+  from { opacity: 1; }
+  to { opacity: 0.14; }
+}
+
+@keyframes venue-page-reveal {
+  from { opacity: 0.14; }
+  to { opacity: 1; }
 }
 
 .venue-preview {
@@ -1176,34 +1221,30 @@ a.event-card__soon:hover {
   aspect-ratio: var(--venue-preview-ratio);
   margin: auto;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
-  border-radius: var(--radius);
-  background: var(--space);
+  background: transparent;
   color: var(--paper);
   opacity: 0;
-  scale: 0.98;
-  translate: 0 0.75rem;
   transition:
     opacity 220ms var(--ease),
-    scale 220ms var(--ease),
-    translate 220ms var(--ease),
     overlay 220ms allow-discrete,
     display 220ms allow-discrete;
 }
 
 .venue-preview[open] {
   opacity: 1;
-  scale: 1;
-  translate: 0;
 }
 
 @starting-style {
   .venue-preview[open] {
     opacity: 0;
-    scale: 0.98;
-    translate: 0 0.75rem;
   }
+}
+
+:root[data-venue-transitioning] .venue-preview {
+  opacity: 1;
+  transition: none;
 }
 
 .venue-preview::backdrop {
@@ -1231,6 +1272,9 @@ body:has(.venue-preview[open]) {
 .venue-preview__shell {
   position: relative;
   height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--space);
 }
 
 .venue-preview__viewer {
@@ -1245,9 +1289,10 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview__viewport {
+  position: relative;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 
@@ -1258,12 +1303,12 @@ body:has(.venue-preview[open]) {
   height: 100%;
   min-height: 100%;
   padding: 0;
-  place-items: center;
   border: 0;
   background: transparent;
   color: inherit;
   cursor: zoom-in;
   font: inherit;
+  place-items: start;
   touch-action: pan-y pinch-zoom;
   user-select: none;
 }
@@ -1285,27 +1330,48 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview[data-zoomed] .venue-preview__picture {
+  width: 200%;
+  min-width: 200%;
+  height: 200%;
+  min-height: 200%;
   cursor: zoom-out;
-  touch-action: auto;
+  touch-action: none;
+}
+
+.venue-preview[data-zoomed] .venue-preview__viewport {
+  overflow: auto;
+  cursor: zoom-out;
+  touch-action: none;
 }
 
 .venue-preview[data-zoomed] .venue-preview__image {
+  width: 50%;
+  height: 50%;
   transform: scale(2);
+}
+
+.venue-preview__slide {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  transform: none;
+  transition: none;
 }
 
 .venue-preview__caption {
   position: absolute;
   z-index: 2;
-  right: auto;
+  right: 0;
   bottom: 0;
   left: 0;
-  max-width: min(52rem, 100%);
-  padding: 0.85rem 1rem;
-  border: 1px solid rgb(255 250 243 / 0.2);
-  border-radius: 0 7px 0 0;
-  background: rgb(13 10 22 / 0.72);
+  width: 100%;
+  max-width: none;
+  padding: clamp(3rem, 9vh, 5.5rem) 1rem 1rem;
+  border: 0;
+  background: linear-gradient(to top, rgb(13 10 22 / 0.9), rgb(13 10 22 / 0.62) 45%, transparent 100%);
   color: var(--paper);
   pointer-events: none;
+  text-align: center;
   transition: opacity 160ms ease;
 }
 
@@ -1316,10 +1382,10 @@ body:has(.venue-preview[open]) {
 }
 
 .venue-preview__close {
-  position: absolute;
+  position: fixed;
   z-index: 4;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
   display: grid;
   width: 2.75rem;
   height: 2.75rem;
@@ -1330,6 +1396,7 @@ body:has(.venue-preview[open]) {
   background: rgb(13 10 22 / 0.68);
   color: var(--paper);
   transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+  view-transition-name: venue-close;
 }
 
 .venue-preview__close:hover {
@@ -1380,19 +1447,16 @@ body:has(.venue-preview[open]) {
 
 @media (hover: hover) {
   .venue-preview__caption,
-  .venue-preview__close,
   .venue-preview__controls {
     opacity: 0;
   }
 
   .venue-preview__shell:hover :is(
     .venue-preview__caption,
-    .venue-preview__close,
     .venue-preview__controls
   ),
   .venue-preview:has(:focus-visible) :is(
     .venue-preview__caption,
-    .venue-preview__close,
     .venue-preview__controls
   ) {
     opacity: 1;
@@ -1401,10 +1465,11 @@ body:has(.venue-preview[open]) {
   .venue-preview__controls .button:hover {
     border-color: var(--orange);
     color: var(--orange);
+    translate: 0;
   }
 
-  .venue-preview__controls .button:hover .venue-preview__next-icon {
-    translate: 2px 0;
+  .venue-preview__controls .button:hover .button__icon {
+    translate: 0;
   }
 }
 

@@ -9,6 +9,7 @@ const initVenueGallery = () => {
   const viewport = dialog.querySelector("[data-venue-viewport]");
   const description = dialog.querySelector("[data-venue-description]");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const root = document.documentElement;
 
   if (!photos.length || !image || !picture || !viewport || !description) return;
   gallery.dataset.venueGalleryBound = "true";
@@ -17,7 +18,10 @@ const initVenueGallery = () => {
   let opener;
   let gesture;
   let previewRule;
+  let slide;
   let suppressClick = false;
+  let transition;
+  let closeQueued = false;
   let zoomTimer;
 
   const setPreviewRatio = (width, height) => {
@@ -38,9 +42,19 @@ const initVenueGallery = () => {
     const pointerId = gesture?.id;
     gesture = null;
     suppressClick = false;
-    if (pointerId !== undefined && picture.hasPointerCapture(pointerId)) picture.releasePointerCapture(pointerId);
+    if (pointerId !== undefined && viewport.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
     delete picture.dataset.dragging;
     picture.style.removeProperty("transform");
+  };
+
+  const clearSlide = () => {
+    if (!slide) return;
+    const active = slide;
+    slide = null;
+    active.animations.forEach((animation) => animation.cancel());
+    active.incoming.remove();
+    const photo = photos[currentIndex];
+    setPreviewRatio(Number(photo.dataset.width), Number(photo.dataset.height));
   };
 
   const setZoom = (zoomed, point) => {
@@ -52,10 +66,13 @@ const initVenueGallery = () => {
       image.style.setProperty("--venue-zoom-x", `${x}px`);
       image.style.setProperty("--venue-zoom-y", `${y}px`);
       zoomTimer = window.setTimeout(() => {
+        zoomTimer = null;
         if (!dialog.hasAttribute("data-zoomed")) return;
         image.style.setProperty("--venue-zoom-x", "0px");
         image.style.setProperty("--venue-zoom-y", "0px");
-        viewport.scrollBy({ left: x, top: y });
+        requestAnimationFrame(() => {
+          if (dialog.hasAttribute("data-zoomed")) viewport.scrollTo({ left: x, top: y });
+        });
       }, reducedMotion.matches ? 0 : 280);
     }
 
@@ -80,24 +97,51 @@ const initVenueGallery = () => {
   };
 
   const selectPhoto = (index, direction, startOffset = 0) => {
-    if (index === currentIndex) return;
-    const apply = () => renderPhoto(index);
-    if (reducedMotion.matches) return apply();
+    if (index === currentIndex || slide) return;
+    setZoom(false);
+    if (reducedMotion.matches) return renderPhoto(index);
 
-    picture.getAnimations().forEach((animation) => animation.cancel());
-    const outgoing = picture.animate([
-      { opacity: 1, transform: `translateX(${startOffset}px)` },
-      { opacity: 0, transform: `translateX(${startOffset - direction * 14}px)` }
-    ], { duration: 140, easing: "ease-in", fill: "forwards" });
+    const photo = photos[index];
+    const before = dialog.getBoundingClientRect();
+    setPreviewRatio(Number(photo.dataset.width), Number(photo.dataset.height));
+    const after = dialog.getBoundingClientRect();
+    const distance = Math.max(before.width, after.width);
+    const offset = Math.max(-distance, Math.min(distance, startOffset));
+    const incoming = image.cloneNode();
+    incoming.removeAttribute("data-venue-preview-image");
+    incoming.removeAttribute("data-venue-transition");
+    incoming.classList.add("venue-preview__slide");
+    incoming.src = photo.dataset.src;
+    incoming.alt = "";
+    incoming.width = Number(photo.dataset.width);
+    incoming.height = Number(photo.dataset.height);
+    incoming.setAttribute("aria-hidden", "true");
+    viewport.append(incoming);
 
-    outgoing.onfinish = () => {
-      outgoing.cancel();
-      apply();
+    const timing = { duration: 320, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" };
+    const animations = [
       picture.animate([
-        { opacity: 0, transform: `translateX(${direction * 14}px)` },
-        { opacity: 1, transform: "translateX(0)" }
-      ], { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
-    };
+        { transform: `translateX(${offset}px)` },
+        { transform: `translateX(${-direction * distance}px)` }
+      ], timing),
+      incoming.animate([
+        { transform: `translateX(${offset + direction * distance}px)` },
+        { transform: "translateX(0)" }
+      ], timing),
+      dialog.animate([
+        { width: `${before.width}px`, height: `${before.height}px` },
+        { width: `${after.width}px`, height: `${after.height}px` }
+      ], timing)
+    ];
+    const active = { animations, incoming };
+    slide = active;
+    Promise.all(animations.map((animation) => animation.finished)).then(() => {
+      if (slide !== active) return;
+      renderPhoto(index);
+      clearSlide();
+    }, () => {
+      if (slide === active) clearSlide();
+    });
   };
 
   const move = (direction, startOffset = 0) => selectPhoto(
@@ -106,7 +150,53 @@ const initVenueGallery = () => {
     startOffset
   );
 
+  const runSharedTransition = (from, to, update, direction) => {
+    root.dataset.venueTransitioning = direction;
+    from.dataset.venueTransition = "";
+    const active = document.startViewTransition(() => {
+      delete from.dataset.venueTransition;
+      update();
+      to.dataset.venueTransition = "";
+    });
+    transition = active;
+    const cleanup = () => {
+      if (transition !== active) return;
+      delete from.dataset.venueTransition;
+      delete to.dataset.venueTransition;
+      delete root.dataset.venueTransitioning;
+      transition = null;
+    };
+    active.finished.then(cleanup, cleanup);
+  };
+
+  const closePreview = () => {
+    if (!dialog.open) return;
+    if (transition) {
+      if (closeQueued) return;
+      closeQueued = true;
+      const retry = () => {
+        closeQueued = false;
+        closePreview();
+      };
+      transition.skipTransition();
+      transition.finished.then(retry, retry);
+      return;
+    }
+    clearSlide();
+    const photo = photos[currentIndex];
+    const thumbnail = photo.querySelector("img");
+    opener = photo;
+    if (reducedMotion.matches || !document.startViewTransition || !thumbnail) {
+      dialog.close();
+      return;
+    }
+
+    photo.scrollIntoView({ behavior: "instant", block: "nearest", inline: "nearest" });
+    runSharedTransition(image, thumbnail, () => dialog.close(), "close");
+  };
+
   photos.forEach((photo, index) => photo.addEventListener("click", () => {
+    if (transition) return;
     resetGesture();
     opener = photo;
     renderPhoto(index);
@@ -116,25 +206,27 @@ const initVenueGallery = () => {
       return;
     }
 
-    thumbnail.dataset.venueTransition = "";
-    const transition = document.startViewTransition(() => {
-      delete thumbnail.dataset.venueTransition;
-      image.dataset.venueTransition = "";
-      dialog.showModal();
-    });
-    transition.finished.finally(() => delete image.dataset.venueTransition);
+    runSharedTransition(thumbnail, image, () => dialog.showModal(), "open");
   }));
 
-  dialog.querySelector("[data-venue-close]").addEventListener("click", () => dialog.close());
+  dialog.querySelector("[data-venue-close]").addEventListener("click", closePreview);
   dialog.querySelector("[data-venue-previous]").addEventListener("click", () => move(-1));
   dialog.querySelector("[data-venue-next]").addEventListener("click", () => move(1));
   dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
+    if (event.target === dialog) closePreview();
+  });
+  dialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closePreview();
   });
 
-  picture.addEventListener("click", (event) => {
+  viewport.addEventListener("click", (event) => {
     if (suppressClick) {
       suppressClick = false;
+      event.preventDefault();
+      return;
+    }
+    if (slide) {
       event.preventDefault();
       return;
     }
@@ -143,39 +235,48 @@ const initVenueGallery = () => {
     setZoom(!dialog.hasAttribute("data-zoomed"), point);
   });
 
-  picture.addEventListener("pointerdown", (event) => {
-    if (!event.isPrimary || event.button !== 0) return;
+  viewport.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0 || slide) return;
     picture.getAnimations().forEach((animation) => animation.cancel());
     suppressClick = false;
+    const zoomed = dialog.hasAttribute("data-zoomed");
     gesture = {
       id: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
+      startScrollLeft: viewport.scrollLeft,
+      startScrollTop: viewport.scrollTop,
       offset: 0,
       axis: null,
       dragged: false,
-      zoomed: dialog.hasAttribute("data-zoomed")
+      zoomed
     };
+    if (zoomed) viewport.setPointerCapture(event.pointerId);
   });
 
-  picture.addEventListener("pointermove", (event) => {
+  viewport.addEventListener("pointermove", (event) => {
     if (!gesture || gesture.id !== event.pointerId) return;
     const deltaX = event.clientX - gesture.startX;
     const deltaY = event.clientY - gesture.startY;
     gesture.dragged ||= Math.hypot(deltaX, deltaY) > 8;
 
     if (gesture.zoomed) {
+      if (!gesture.dragged) return;
+      event.preventDefault();
+      picture.dataset.dragging = "true";
+      viewport.scrollLeft = gesture.startScrollLeft - deltaX;
+      viewport.scrollTop = gesture.startScrollTop - deltaY;
       return;
     }
 
     if (!gesture.axis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 8) {
       gesture.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
-      if (gesture.axis === "x") picture.setPointerCapture(event.pointerId);
+      if (gesture.axis === "x") viewport.setPointerCapture(event.pointerId);
     }
     if (gesture.axis !== "x") return;
 
     event.preventDefault();
-    gesture.offset = deltaX * 0.72;
+    gesture.offset = deltaX;
     picture.dataset.dragging = "true";
     picture.style.transform = `translateX(${gesture.offset}px)`;
   });
@@ -186,11 +287,11 @@ const initVenueGallery = () => {
     gesture = null;
     delete picture.dataset.dragging;
     picture.style.removeProperty("transform");
-    suppressClick = !cancelled && dragged;
+    suppressClick = dragged;
 
-    if (cancelled || zoomed || !dragged || axis !== "x") return;
+    if (zoomed || !dragged || axis !== "x") return;
     const threshold = Math.min(72, Math.max(48, viewport.clientWidth * 0.12));
-    if (Math.abs(offset / 0.72) >= threshold) {
+    if (!cancelled && Math.abs(offset) >= threshold) {
       move(offset < 0 ? 1 : -1, offset);
     } else if (!reducedMotion.matches) {
       picture.animate([
@@ -200,9 +301,8 @@ const initVenueGallery = () => {
     }
   };
 
-  picture.addEventListener("pointerup", (event) => finishGesture(event));
-  picture.addEventListener("pointercancel", (event) => finishGesture(event, true));
-  picture.addEventListener("lostpointercapture", (event) => finishGesture(event, true));
+  viewport.addEventListener("pointerup", (event) => finishGesture(event));
+  viewport.addEventListener("pointercancel", (event) => finishGesture(event, true));
 
   dialog.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -211,11 +311,12 @@ const initVenueGallery = () => {
   });
 
   dialog.addEventListener("close", () => {
+    clearSlide();
     picture.getAnimations().forEach((animation) => animation.cancel());
     delete image.dataset.venueTransition;
     resetGesture();
     setZoom(false);
-    opener?.focus();
+    opener?.focus({ preventScroll: true });
   });
 };
 
