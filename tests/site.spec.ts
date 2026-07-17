@@ -363,7 +363,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/$/);
 });
 
-test("previews venue photos accessibly", async ({ page }) => {
+test("previews venue photos accessibly", async ({ context, page }, testInfo) => {
   await page.goto("/2026/events/project-kickoff/");
 
   const alts = [
@@ -387,6 +387,7 @@ test("previews venue photos accessibly", async ({ page }) => {
   for (let index = 0; index < alts.length; index += 1) {
     const thumbnail = thumbnails.nth(index).getByRole("img", { name: alts[index] });
     await expect(thumbnail).toHaveAttribute("src", sources[index]);
+    await expect(thumbnail).toHaveCSS("object-fit", "contain");
   }
   await expect(page.getByText(descriptions[0], { exact: true })).not.toBeVisible();
 
@@ -409,16 +410,42 @@ test("previews venue photos accessibly", async ({ page }) => {
   });
 
   const opener = thumbnails.first();
+  if (testInfo.project.name === "desktop") {
+    await opener.hover();
+    await expect.poll(() => opener.evaluate((button) => (
+      Math.abs(Number.parseFloat(getComputedStyle(button).translate))
+    ))).toBeGreaterThan(1);
+    const hoverStyle = await opener.evaluate((button) => {
+      const railStyle = getComputedStyle(button.closest("[aria-label='Venue photos']")!);
+      const style = getComputedStyle(button);
+      const extrusion = Math.abs(Number.parseFloat(style.translate));
+      return {
+        boxShadow: style.boxShadow,
+        hasEdgeClearance: Number.parseFloat(railStyle.paddingTop) >= extrusion + 6
+          && Number.parseFloat(railStyle.paddingLeft) >= extrusion + 6,
+        translate: style.translate
+      };
+    });
+    expect(hoverStyle.boxShadow).not.toBe("none");
+    expect(hoverStyle.hasEdgeClearance).toBe(true);
+    expect(hoverStyle.translate).not.toBe("none");
+  }
+
   await opener.click();
   const dialog = page.getByRole("dialog", { name: "Venue photo preview" });
   const preview = dialog.getByRole("img", { name: alts[0] });
   const caption = dialog.locator("[data-venue-caption]");
+  const picture = dialog.getByRole("button", { name: "Zoom in on venue photo" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Close venue photo preview" })).toBeVisible();
   await expect(preview).toHaveAttribute("src", sources[0]);
-  await expect(dialog.locator("[data-venue-counter]")).toHaveText("1 / 3");
+  await expect(dialog.locator("[data-venue-counter], [data-venue-zoom], [data-venue-details]")).toHaveCount(0);
+  const controls = dialog.getByRole("group", { name: "Venue photo controls" });
+  await expect(controls.getByRole("button")).toHaveCount(2);
+  await expect(controls.getByRole("button", { name: /zoom|details/i })).toHaveCount(0);
+  await expect(dialog.getByText(/^\d+\s*\/\s*\d+$/)).toHaveCount(0);
   await expect(dialog.getByText(descriptions[0], { exact: true })).toBeVisible();
-  await expect(caption).toHaveCSS("background-color", "rgba(13, 10, 22, 0.92)");
+  await expect(caption).toHaveCSS("background-color", "rgb(13, 10, 22)");
   await expect(caption).toHaveCSS("color", "rgb(255, 250, 243)");
   expect(await preview.evaluate((image) => {
     const source = image as HTMLImageElement;
@@ -426,32 +453,100 @@ test("previews venue photos accessibly", async ({ page }) => {
     return Math.abs(box.width / box.height - source.naturalWidth / source.naturalHeight);
   })).toBeLessThan(0.01);
 
-  const details = dialog.getByRole("button", { name: "Hide details" });
-  await expect(details).toHaveAttribute("aria-expanded", "true");
-  await details.click();
-  await expect(caption).toBeHidden();
-  await expect(dialog.getByRole("button", { name: "Show details" })).toHaveAttribute("aria-expanded", "false");
-  await dialog.getByRole("button", { name: "Show details" }).click();
-  await expect(caption).toBeVisible();
+  const previous = controls.getByRole("button", { name: "Previous venue photo" });
+  const next = controls.getByRole("button", { name: "Next venue photo" });
+  const [shellBox, previousBox, nextBox] = await Promise.all([
+    dialog.locator(".venue-preview__shell").boundingBox(),
+    previous.boundingBox(),
+    next.boundingBox()
+  ]);
+  expect(previousBox!.x).toBeGreaterThan(shellBox!.x + shellBox!.width / 2);
+  expect(previousBox!.x).toBeLessThan(nextBox!.x);
+  expect(Math.abs(previousBox!.y - nextBox!.y)).toBeLessThan(2);
+  const controlsRightGap = shellBox!.x + shellBox!.width - nextBox!.x - nextBox!.width;
+  expect(controlsRightGap).toBeGreaterThanOrEqual(0);
+  expect(controlsRightGap).toBeLessThan(24);
 
-  const zoom = dialog.getByRole("button", { name: "Zoom in" });
-  await zoom.click();
+  const previewBox = await preview.boundingBox();
+  const zoomPoint = {
+    x: previewBox!.x + previewBox!.width * 0.72,
+    y: previewBox!.y + previewBox!.height * 0.28
+  };
+  await page.mouse.click(zoomPoint.x, zoomPoint.y);
   await expect(dialog).toHaveAttribute("data-zoomed", "");
-  await expect(dialog.getByRole("button", { name: "Zoom out" })).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: "Zoom out of venue photo" })).toHaveAttribute("aria-pressed", "true");
   expect(await preview.evaluate((image) => getComputedStyle(image).transform)).not.toBe("none");
+  const zoomOrigin = await preview.evaluate((image) => {
+    const [x, y] = getComputedStyle(image).transformOrigin.split(" ").map(Number.parseFloat);
+    return { x: x / image.clientWidth, y: y / image.clientHeight };
+  });
+  expect(zoomOrigin.x).toBeCloseTo(0.72, 1);
+  expect(zoomOrigin.y).toBeCloseTo(0.28, 1);
   await expect.poll(() => dialog.locator("[data-venue-viewport]").evaluate((viewport) => (
     viewport.scrollWidth > viewport.clientWidth
   ))).toBe(true);
+  await expect.poll(() => dialog.locator("[data-venue-viewport]").evaluate((viewport) => viewport.scrollLeft)).toBeGreaterThan(0);
+  const normalizedZoom = await dialog.locator("[data-venue-viewport]").evaluate((viewport) => {
+    const image = viewport.querySelector("[data-venue-preview-image]") as HTMLImageElement;
+    const expectedScrollTop = Math.min(image.clientHeight * 0.28, viewport.scrollHeight - viewport.clientHeight);
+    return {
+      anchorErrorRatio: Math.abs(viewport.scrollLeft - image.clientWidth * 0.72) / image.clientWidth,
+      verticalAnchorErrorRatio: Math.abs(viewport.scrollTop - expectedScrollTop) / image.clientHeight,
+      origin: getComputedStyle(image).transformOrigin
+    };
+  });
+  expect(normalizedZoom.anchorErrorRatio).toBeLessThan(0.01);
+  expect(normalizedZoom.verticalAnchorErrorRatio).toBeLessThan(0.01);
+  expect(normalizedZoom.origin).toBe("0px 0px");
 
   await page.keyboard.press("ArrowRight");
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("src", sources[1]);
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("alt", alts[1]);
-  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
   await expect(dialog.getByText(descriptions[1], { exact: true })).toBeVisible();
   await expect(dialog).not.toHaveAttribute("data-zoomed");
-  await expect(dialog.getByRole("button", { name: "Zoom in" })).toHaveAttribute("aria-pressed", "false");
+  await expect(picture).toHaveAttribute("aria-pressed", "false");
   await page.keyboard.press("ArrowLeft");
-  await expect(dialog.locator("[data-venue-counter]")).toHaveText("1 / 3");
+  await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("src", sources[0]);
+
+  if (testInfo.project.name === "mobile") {
+    const swipeBox = await preview.boundingBox();
+    const y = swipeBox!.y + swipeBox!.height * 0.3;
+    const client = await context.newCDPSession(page);
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: swipeBox!.x + swipeBox!.width * 0.78, y }]
+    });
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: swipeBox!.x + swipeBox!.width * 0.22, y }]
+    });
+    await expect(picture).toHaveAttribute("data-dragging", "true");
+    await expect.poll(() => picture.evaluate((element) => (
+      new DOMMatrix(getComputedStyle(element).transform).e
+    ))).toBeLessThan(-10);
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("src", sources[1]);
+    await expect(dialog.getByText(descriptions[1], { exact: true })).toBeVisible();
+    await expect.poll(() => picture.evaluate((element) => element.getAnimations().length)).toBe(0);
+
+    const reverseBox = await dialog.locator("[data-venue-preview-image]").boundingBox();
+    const reverseY = reverseBox!.y + reverseBox!.height * 0.3;
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: reverseBox!.x + reverseBox!.width * 0.22, y: reverseY }]
+    });
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: reverseBox!.x + reverseBox!.width * 0.78, y: reverseY }]
+    });
+    await expect(picture).toHaveAttribute("data-dragging", "true");
+    await expect.poll(() => picture.evaluate((element) => (
+      new DOMMatrix(getComputedStyle(element).transform).e
+    ))).toBeGreaterThan(10);
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("src", sources[0]);
+    await client.detach();
+  }
 
   await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
   await expect(dialog).toBeHidden();
@@ -487,11 +582,14 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   expect(await dialog.evaluate((element) => element.getAnimations().some((animation) => (
     Number(animation.effect?.getTiming().duration) >= 200
   )))).toBe(true);
-  await dialog.getByRole("button", { name: "Next" }).click();
+  await dialog.getByRole("button", { name: "Next venue photo" }).click();
   expect(await picture.evaluate((element) => element.getAnimations().some((animation) => (
     Number(animation.effect?.getTiming().duration) >= 140
   )))).toBe(true);
-  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
+  await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute(
+    "src",
+    "/2026/events/project-kickoff-venue-workspace.jpg"
+  );
   await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
   expect(await dialog.evaluate((element) => (
     !element.hasAttribute("open")
@@ -502,13 +600,23 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   const reducedTransitionMs = await dialog.evaluate((element) => {
-    const time = getComputedStyle(element).transitionDuration;
-    return Number.parseFloat(time) * (time.endsWith("ms") ? 1 : 1000);
+    const duration = (target: Element) => {
+      const time = getComputedStyle(target).transitionDuration;
+      return Number.parseFloat(time) * (time.endsWith("ms") ? 1 : 1000);
+    };
+    return {
+      dialog: duration(element),
+      image: duration(element.querySelector("[data-venue-preview-image]")!)
+    };
   });
-  expect(reducedTransitionMs).toBeLessThanOrEqual(0.01);
+  expect(reducedTransitionMs.dialog).toBeLessThanOrEqual(0.01);
+  expect(reducedTransitionMs.image).toBeLessThanOrEqual(0.01);
   await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
-  await dialog.getByRole("button", { name: "Next" }).click();
-  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
+  await dialog.getByRole("button", { name: "Next venue photo" }).click();
+  await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute(
+    "src",
+    "/2026/events/project-kickoff-venue-workspace.jpg"
+  );
   expect(await picture.evaluate((element) => element.getAnimations())).toHaveLength(0);
 });
 

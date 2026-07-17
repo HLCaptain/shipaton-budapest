@@ -153,7 +153,13 @@ const date = new Intl.DateTimeFormat("en-GB", {
 
             <figure class="venue-preview__viewer">
               <div class="venue-preview__viewport" data-venue-viewport>
-                <div class="venue-preview__picture" data-venue-picture>
+                <button
+                  class="venue-preview__picture"
+                  type="button"
+                  aria-label="Zoom in on venue photo"
+                  aria-pressed="false"
+                  data-venue-picture
+                >
                   <img
                     class="venue-preview__image"
                     src={firstVenueImage.src}
@@ -161,35 +167,23 @@ const date = new Intl.DateTimeFormat("en-GB", {
                     width={firstVenueImage.width}
                     height={firstVenueImage.height}
                     decoding="async"
+                    draggable="false"
                     data-venue-preview-image
                   />
-                </div>
+                </button>
               </div>
               <figcaption class="venue-preview__caption" id="venue-preview-caption" aria-live="polite" data-venue-caption>
-                <span class="venue-preview__counter" data-venue-counter>1 / {venueImages.length}</span>
                 <p data-venue-description>{firstVenueImage.description}</p>
               </figcaption>
             </figure>
 
             <div class="venue-preview__controls" role="group" aria-label="Venue photo controls">
-              <button class="button button--quiet button--compact" type="button" data-venue-previous>
+              <button class="button button--quiet button--compact" type="button" aria-label="Previous venue photo" data-venue-previous>
                 <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                   <path d="M13 8H3m0 0 4-4M3 8l4 4" />
                 </svg>
-                Previous
               </button>
-              <button class="button button--quiet button--compact" type="button" aria-pressed="false" data-venue-zoom>Zoom in</button>
-              <button
-                class="button button--quiet button--compact"
-                type="button"
-                aria-controls="venue-preview-caption"
-                aria-expanded="true"
-                data-venue-details
-              >
-                Hide details
-              </button>
-              <button class="button button--quiet button--compact" type="button" data-venue-next>
-                Next
+              <button class="button button--quiet button--compact" type="button" aria-label="Next venue photo" data-venue-next>
                 <svg class="button__icon venue-preview__next-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                   <path d="M3 8h10m0 0-4-4m4 4-4 4" />
                 </svg>

@@ -377,7 +377,7 @@ svg {
   }
 }
 
-:where(.button--primary, .hero__art, .event-card, .event-grid-card) {
+:where(.button--primary, .hero__art, .event-card, .event-grid-card, .event-venue__thumbnail) {
   --extrusion-color: var(--space);
   --extrusion-factor: clamp(0.35rem, 0.75vw, 0.5rem);
   --extrusion-shadow:
@@ -1101,7 +1101,7 @@ a.event-card__soon:hover {
 .event-venue__rail {
   display: flex;
   margin: 0;
-  padding: 0.25rem 0.25rem 1rem;
+  padding: 1rem;
   gap: 1rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -1117,6 +1117,7 @@ a.event-card__soon:hover {
 }
 
 .event-venue__thumbnail {
+  --extrusion-color: var(--orange);
   position: relative;
   display: block;
   width: 100%;
@@ -1132,23 +1133,21 @@ a.event-card__soon:hover {
 .event-venue__thumbnail img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transition: scale 220ms var(--ease);
+  object-fit: contain;
 }
 
 .event-venue__thumbnail:focus-visible {
+  border-color: var(--orange);
+  box-shadow: var(--extrusion-shadow);
   outline-offset: 3px;
+  translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
 }
 
 @media (hover: hover) {
   .event-venue__thumbnail:hover {
     border-color: var(--orange);
-    box-shadow: 0.35rem 0.35rem 0 var(--space);
-    translate: -0.2rem -0.2rem;
-  }
-
-  .event-venue__thumbnail:hover img {
-    scale: 1.025;
+    box-shadow: var(--extrusion-shadow);
+    translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
   }
 }
 
@@ -1235,10 +1234,23 @@ body:has(.venue-preview[open]) {
 
 .venue-preview__picture {
   display: grid;
+  width: 100%;
   min-width: 100%;
+  height: 100%;
   min-height: 100%;
   padding: 1rem;
   place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+  font: inherit;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+}
+
+.venue-preview__picture[data-dragging] {
+  cursor: grabbing;
 }
 
 .venue-preview__image {
@@ -1246,15 +1258,18 @@ body:has(.venue-preview[open]) {
   height: auto;
   max-width: 100%;
   max-height: calc(100dvh - 9rem);
-  cursor: zoom-in;
+  pointer-events: none;
   transform: scale(1);
-  transform-origin: top left;
+  transform-origin: var(--venue-zoom-x, 50%) var(--venue-zoom-y, 50%);
   transition: transform 260ms var(--ease);
 }
 
-.venue-preview[data-zoomed] .venue-preview__image {
-  max-height: none;
+.venue-preview[data-zoomed] .venue-preview__picture {
   cursor: zoom-out;
+  touch-action: auto;
+}
+
+.venue-preview[data-zoomed] .venue-preview__image {
   transform: scale(2);
 }
 
@@ -1268,23 +1283,9 @@ body:has(.venue-preview[open]) {
   padding: 0.85rem 1rem;
   border: 1px solid rgb(255 250 243 / 0.2);
   border-radius: 7px;
-  background: rgb(13 10 22 / 0.92);
+  background: rgb(13 10 22);
   color: var(--paper);
   pointer-events: none;
-}
-
-.venue-preview__caption[hidden] {
-  display: none;
-}
-
-.venue-preview__counter {
-  display: block;
-  margin-bottom: 0.35rem;
-  color: var(--orange);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
 }
 
 .venue-preview__caption p {
@@ -1328,14 +1329,16 @@ body:has(.venue-preview[open]) {
   display: flex;
   padding: 0.75rem;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.6rem;
   border-top: 1px solid rgb(255 250 243 / 0.2);
   background: var(--space);
 }
 
 .venue-preview__controls .button {
+  width: 2.75rem;
   min-height: 2.7rem;
+  padding: 0;
   border-color: rgb(255 250 243 / 0.45);
   background: rgb(255 250 243 / 0.08);
   color: var(--paper);
@@ -2066,10 +2069,6 @@ body:has(.venue-preview[open]) {
     right: 0.5rem;
     bottom: 0.5rem;
     left: 0.5rem;
-  }
-
-  .venue-preview__controls .button {
-    flex: 1 1 calc(50% - 0.6rem);
   }
 
   .site-footer__grid {

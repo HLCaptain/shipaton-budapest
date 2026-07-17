@@ -7,30 +7,47 @@ const initVenueGallery = () => {
   const image = dialog.querySelector("[data-venue-preview-image]");
   const picture = dialog.querySelector("[data-venue-picture]");
   const viewport = dialog.querySelector("[data-venue-viewport]");
-  const caption = dialog.querySelector("[data-venue-caption]");
-  const counter = dialog.querySelector("[data-venue-counter]");
   const description = dialog.querySelector("[data-venue-description]");
-  const zoom = dialog.querySelector("[data-venue-zoom]");
-  const details = dialog.querySelector("[data-venue-details]");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-  if (!photos.length || !image || !picture || !viewport || !caption || !counter || !description || !zoom || !details) return;
+  if (!photos.length || !image || !picture || !viewport || !description) return;
   gallery.dataset.venueGalleryBound = "true";
 
   let currentIndex = 0;
   let opener;
+  let gesture;
+  let suppressClick = false;
+  let zoomTimer;
 
-  const setZoom = (zoomed) => {
-    dialog.toggleAttribute("data-zoomed", zoomed);
-    zoom.setAttribute("aria-pressed", String(zoomed));
-    zoom.textContent = zoomed ? "Zoom out" : "Zoom in";
-    if (!zoomed) viewport.scrollTo(0, 0);
+  const resetGesture = () => {
+    const pointerId = gesture?.id;
+    gesture = null;
+    suppressClick = false;
+    if (pointerId !== undefined && picture.hasPointerCapture(pointerId)) picture.releasePointerCapture(pointerId);
+    delete picture.dataset.dragging;
+    picture.style.removeProperty("transform");
   };
 
-  const setDetails = (visible) => {
-    caption.hidden = !visible;
-    details.setAttribute("aria-expanded", String(visible));
-    details.textContent = visible ? "Hide details" : "Show details";
+  const setZoom = (zoomed, point) => {
+    window.clearTimeout(zoomTimer);
+    if (zoomed) {
+      const bounds = image.getBoundingClientRect();
+      const x = point ? Math.min(Math.max(point.x - bounds.left, 0), bounds.width) : bounds.width / 2;
+      const y = point ? Math.min(Math.max(point.y - bounds.top, 0), bounds.height) : bounds.height / 2;
+      image.style.setProperty("--venue-zoom-x", `${x}px`);
+      image.style.setProperty("--venue-zoom-y", `${y}px`);
+      zoomTimer = window.setTimeout(() => {
+        if (!dialog.hasAttribute("data-zoomed")) return;
+        image.style.setProperty("--venue-zoom-x", "0px");
+        image.style.setProperty("--venue-zoom-y", "0px");
+        viewport.scrollBy({ left: x, top: y });
+      }, reducedMotion.matches ? 0 : 280);
+    }
+
+    dialog.toggleAttribute("data-zoomed", zoomed);
+    picture.setAttribute("aria-pressed", String(zoomed));
+    picture.setAttribute("aria-label", zoomed ? "Zoom out of venue photo" : "Zoom in on venue photo");
+    if (!zoomed) viewport.scrollTo(0, 0);
   };
 
   const renderPhoto = (index) => {
@@ -41,19 +58,18 @@ const initVenueGallery = () => {
     image.width = Number(photo.dataset.width);
     image.height = Number(photo.dataset.height);
     description.textContent = photo.dataset.description;
-    counter.textContent = `${index + 1} / ${photos.length}`;
     setZoom(false);
   };
 
-  const selectPhoto = (index, direction) => {
+  const selectPhoto = (index, direction, startOffset = 0) => {
     if (index === currentIndex) return;
     const apply = () => renderPhoto(index);
     if (reducedMotion.matches) return apply();
 
     picture.getAnimations().forEach((animation) => animation.cancel());
     const outgoing = picture.animate([
-      { opacity: 1, transform: "translateX(0)" },
-      { opacity: 0, transform: `translateX(${direction * -14}px)` }
+      { opacity: 1, transform: `translateX(${startOffset}px)` },
+      { opacity: 0, transform: `translateX(${startOffset - direction * 14}px)` }
     ], { duration: 140, easing: "ease-in", fill: "forwards" });
 
     outgoing.onfinish = () => {
@@ -66,21 +82,94 @@ const initVenueGallery = () => {
     };
   };
 
-  const move = (direction) => selectPhoto((currentIndex + direction + photos.length) % photos.length, direction);
+  const move = (direction, startOffset = 0) => selectPhoto(
+    (currentIndex + direction + photos.length) % photos.length,
+    direction,
+    startOffset
+  );
 
   photos.forEach((photo, index) => photo.addEventListener("click", () => {
+    resetGesture();
     opener = photo;
     renderPhoto(index);
-    setDetails(true);
     dialog.showModal();
   }));
 
   dialog.querySelector("[data-venue-close]").addEventListener("click", () => dialog.close());
   dialog.querySelector("[data-venue-previous]").addEventListener("click", () => move(-1));
   dialog.querySelector("[data-venue-next]").addEventListener("click", () => move(1));
-  zoom.addEventListener("click", () => setZoom(!dialog.hasAttribute("data-zoomed")));
-  image.addEventListener("click", () => setZoom(!dialog.hasAttribute("data-zoomed")));
-  details.addEventListener("click", () => setDetails(caption.hidden));
+
+  picture.addEventListener("click", (event) => {
+    if (suppressClick) {
+      suppressClick = false;
+      event.preventDefault();
+      return;
+    }
+
+    const point = event.detail === 0 ? null : { x: event.clientX, y: event.clientY };
+    setZoom(!dialog.hasAttribute("data-zoomed"), point);
+  });
+
+  picture.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    picture.getAnimations().forEach((animation) => animation.cancel());
+    suppressClick = false;
+    gesture = {
+      id: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offset: 0,
+      axis: null,
+      dragged: false,
+      zoomed: dialog.hasAttribute("data-zoomed")
+    };
+  });
+
+  picture.addEventListener("pointermove", (event) => {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    gesture.dragged ||= Math.hypot(deltaX, deltaY) > 8;
+
+    if (gesture.zoomed) {
+      return;
+    }
+
+    if (!gesture.axis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 8) {
+      gesture.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+      if (gesture.axis === "x") picture.setPointerCapture(event.pointerId);
+    }
+    if (gesture.axis !== "x") return;
+
+    event.preventDefault();
+    gesture.offset = deltaX * 0.72;
+    picture.dataset.dragging = "true";
+    picture.style.transform = `translateX(${gesture.offset}px)`;
+  });
+
+  const finishGesture = (event, cancelled = false) => {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const { axis, dragged, offset, zoomed } = gesture;
+    gesture = null;
+    delete picture.dataset.dragging;
+    picture.style.removeProperty("transform");
+    suppressClick = !cancelled && dragged;
+
+    if (cancelled || zoomed || !dragged || axis !== "x") return;
+    const threshold = Math.min(72, Math.max(48, viewport.clientWidth * 0.12));
+    if (Math.abs(offset / 0.72) >= threshold) {
+      move(offset < 0 ? 1 : -1, offset);
+    } else if (!reducedMotion.matches) {
+      picture.animate([
+        { transform: `translateX(${offset}px)` },
+        { transform: "translateX(0)" }
+      ], { duration: 160, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+    }
+  };
+
+  picture.addEventListener("pointerup", (event) => finishGesture(event));
+  picture.addEventListener("pointercancel", (event) => finishGesture(event, true));
+  picture.addEventListener("lostpointercapture", (event) => finishGesture(event, true));
 
   dialog.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -90,8 +179,8 @@ const initVenueGallery = () => {
 
   dialog.addEventListener("close", () => {
     picture.getAnimations().forEach((animation) => animation.cancel());
+    resetGesture();
     setZoom(false);
-    setDetails(true);
     opener?.focus();
   });
 };
