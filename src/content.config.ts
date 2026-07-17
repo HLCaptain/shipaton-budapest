@@ -28,6 +28,7 @@ const events2026 = defineCollection({
     tags: z.array(z.string()).min(1),
     schedule: z.array(z.object({
       time: z.string(),
+      emoji: z.string().optional(),
       title: z.string(),
       description: z.string()
     })).min(1),

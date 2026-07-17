@@ -115,7 +115,7 @@ const date = new Intl.DateTimeFormat("en-GB", {
           <li>
             <span class="event-schedule__time">{item.time}</span>
             <div>
-              <h3>{item.title}</h3>
+              <h3>{item.emoji && <span aria-hidden="true">{item.emoji}</span>} {item.title}</h3>
               <p>{item.description}</p>
             </div>
           </li>

@@ -1128,6 +1128,7 @@ a.event-card__soon:hover {
 
 .event-schedule > ol > li::before {
   position: absolute;
+  box-sizing: border-box;
   top: 0.45rem;
   left: calc(-1 * var(--timeline-offset));
   width: 0.8rem;

@@ -213,19 +213,49 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "19:10",
     "20:45"
   ]);
-  const scheduleLayout = await page.locator(".event-schedule > ol > li").first().evaluate((item) => {
-    const time = item.querySelector<HTMLElement>(".event-schedule__time")!;
-    const heading = item.querySelector<HTMLElement>("h3")!;
+  const scheduleEmojis = page.locator('.event-schedule h3 > span[aria-hidden="true"]');
+  await expect(scheduleEmojis).toHaveText(["👋", "🚀", "🎤", "☕", "🎲", "🛠️", "🤝"]);
+  await expect(page.getByRole("heading", { name: "Arrival and registration", exact: true })).toBeVisible();
+  const scheduleLayout = await page.locator(".event-schedule > ol").evaluate((list) => {
+    const items = [...list.children] as HTMLElement[];
+    const number = (value: string) => Number.parseFloat(value);
+    const markerSize = (style: CSSStyleDeclaration, dimension: "height" | "width") => {
+      const border = dimension === "width"
+        ? number(style.borderLeftWidth) + number(style.borderRightWidth)
+        : number(style.borderTopWidth) + number(style.borderBottomWidth);
+      return number(style[dimension]) + (style.boxSizing === "border-box" ? 0 : border);
+    };
+    const geometry = items.slice(0, -1).map((item, index) => {
+      const marker = getComputedStyle(item, "::before");
+      const connector = getComputedStyle(item, "::after");
+      const nextMarker = getComputedStyle(items[index + 1], "::before");
+      return {
+        centerDelta: Math.abs(
+          number(marker.left) + markerSize(marker, "width") / 2
+          - number(connector.left) - number(connector.width) / 2
+        ),
+        endDelta: Math.abs(-number(connector.bottom) - number(nextMarker.top)),
+        startDelta: Math.abs(number(connector.top) - number(marker.top) - markerSize(marker, "height"))
+      };
+    });
+    const time = items[0].querySelector<HTMLElement>(".event-schedule__time")!;
+    const heading = items[0].querySelector<HTMLElement>("h3")!;
     return {
-      connectorWidth: getComputedStyle(item, "::after").width,
+      connectorWidth: getComputedStyle(items[0], "::after").width,
       headingTop: heading.getBoundingClientRect().top,
-      markerWidth: getComputedStyle(item, "::before").borderTopWidth,
+      markerWidth: getComputedStyle(items[0], "::before").borderTopWidth,
+      maxCenterDelta: Math.max(...geometry.map(({ centerDelta }) => centerDelta)),
+      maxEndDelta: Math.max(...geometry.map(({ endDelta }) => endDelta)),
+      maxStartDelta: Math.max(...geometry.map(({ startDelta }) => startDelta)),
       timeBottom: time.getBoundingClientRect().bottom,
       timeFontSize: Number.parseFloat(getComputedStyle(time).fontSize)
     };
   });
   expect(scheduleLayout.connectorWidth).toBe("2px");
   expect(scheduleLayout.markerWidth).toBe("2px");
+  expect(scheduleLayout.maxCenterDelta).toBeLessThan(0.5);
+  expect(scheduleLayout.maxEndDelta).toBeLessThan(0.5);
+  expect(scheduleLayout.maxStartDelta).toBeLessThan(0.5);
   expect(scheduleLayout.timeFontSize).toBeGreaterThan(20);
   expect(scheduleLayout.headingTop).toBeGreaterThan(scheduleLayout.timeBottom);
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
