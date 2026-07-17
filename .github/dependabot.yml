@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    # Remove once @astrojs/check accepts TypeScript 7; 0.9.9 accepts 5 and 6 only.
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - "7.x"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
