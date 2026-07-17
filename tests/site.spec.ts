@@ -42,7 +42,7 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
   await expect(event).toHaveAttribute("aria-current", "date");
   await expect(event.locator("[data-event-state]")).toHaveText("Upcoming");
   await expect(event.locator('[data-event-people="hosts"]')).toContainText("Balázs Püspök-Kiss");
-  await expect(event.locator('[data-event-people="speakers"] li')).toHaveText([
+  await expect(event.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
     "Mirzamehdi Karimov"
@@ -180,7 +180,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-grid-card__link")).toHaveCount(1);
   await expect(page.locator('.event-grid-card [data-event-people="hosts"]')).toContainText("Balázs Püspök-Kiss");
   const listedSpeakers = page.locator('.event-grid-card [data-event-people="speakers"]');
-  await expect(listedSpeakers.locator("li")).toHaveText([
+  await expect(listedSpeakers.locator("li")).toContainText([
     "Márton Braun",
     "Gábor Bóka",
     "Mirzamehdi Karimov"
@@ -205,19 +205,34 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-schedule > ol > li")).toHaveCount(7);
   await expect(page.locator(".event-schedule__index")).toHaveCount(0);
   await expect(page.locator(".event-schedule__time")).toHaveText([
-    "17:00–17:20",
-    "17:20–17:30",
-    "17:30–18:25",
-    "18:25–18:40",
-    "18:40–19:10",
-    "19:10–20:45",
-    "20:45–21:00"
+    "17:00",
+    "17:20",
+    "17:30",
+    "18:25",
+    "18:40",
+    "19:10",
+    "20:45"
   ]);
-  await expect(page.locator(".event-schedule > ol")).toHaveCSS("border-top-width", "2px");
+  const scheduleLayout = await page.locator(".event-schedule > ol > li").first().evaluate((item) => {
+    const time = item.querySelector<HTMLElement>(".event-schedule__time")!;
+    const heading = item.querySelector<HTMLElement>("h3")!;
+    return {
+      connectorWidth: getComputedStyle(item, "::after").width,
+      headingTop: heading.getBoundingClientRect().top,
+      markerWidth: getComputedStyle(item, "::before").borderTopWidth,
+      timeBottom: time.getBoundingClientRect().bottom,
+      timeFontSize: Number.parseFloat(getComputedStyle(time).fontSize)
+    };
+  });
+  expect(scheduleLayout.connectorWidth).toBe("2px");
+  expect(scheduleLayout.markerWidth).toBe("2px");
+  expect(scheduleLayout.timeFontSize).toBeGreaterThan(20);
+  expect(scheduleLayout.headingTop).toBeGreaterThan(scheduleLayout.timeBottom);
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("border-radius", "0px");
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Lightning talks" })).toHaveAttribute("href", "#lightning-talks");
   await expect(page.locator(".event-document__body")).toContainText("Primary languages: English and Hungarian");
+  await expect(page.locator(".event-document__body")).toContainText("Food and drinks will be provided.");
   const thumbnail = page.locator(".event-document__header").getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
   await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.png");
   await expect(thumbnail).toHaveAttribute("width", "1254");
@@ -259,12 +274,18 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "https://luma.com/calendar/cal-VeKA6RiND89uvHk"
   );
   await expect(team.locator('[data-event-people="organizers"] a')).toHaveAttribute("target", "_blank");
-  await expect(team.locator('[data-event-people="speakers"] li')).toHaveText([
+  await expect(team.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
     "Mirzamehdi Karimov"
   ]);
-  await expect(team.locator('[data-event-people="speakers"] a')).toHaveCount(0);
+  const speakerLinks = team.locator('[data-event-people="speakers"] a');
+  await expect(speakerLinks).toHaveCount(3);
+  expect(await speakerLinks.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual([
+    "https://www.linkedin.com/in/zsmb13/",
+    "https://www.linkedin.com/in/gabor-boka/",
+    "https://www.linkedin.com/in/mirzemehdi/"
+  ]);
 
   await page.getByRole("link", { name: "Back to 2026 events" }).click();
   await expect(page).toHaveURL(/\/2026\/events\/$/);
