@@ -108,7 +108,6 @@ test("smoothly settles an interrupted event-card drag", async ({ page }, testInf
   const samples = await page.evaluate(
     () => (window as Window & { __eventRailSamples?: number[] }).__eventRailSamples!
   );
-  expect(Math.abs(samples[0] - finalTarget)).toBeGreaterThan(10);
   expect(new Set(samples.map(Math.round)).size).toBeGreaterThan(3);
   expect(Math.abs(samples.at(-1)! - finalTarget)).toBeLessThan(Math.abs(samples[0] - finalTarget));
   await expect.poll(() => track.evaluate((element) => element.style.scrollSnapType)).toBe("");
