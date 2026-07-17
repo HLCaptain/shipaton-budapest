@@ -25,6 +25,8 @@ const speakers = event.data.speakers ?? [];
 const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const thumbnail = event.data.thumbnail;
+const venueImages = event.data.venueImages ?? [];
+const firstVenueImage = venueImages[0]!;
 const date = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "long",
@@ -107,6 +109,96 @@ const date = new Intl.DateTimeFormat("en-GB", {
         </nav>
       )}
     </header>
+
+    {venueImages.length > 0 && (
+      <>
+        <section class="event-venue" aria-labelledby="venue-title" data-venue-gallery>
+          <SectionHeading eyebrow="See the space" id="venue-title" title="Venue preview" />
+          <ul class="event-venue__rail" aria-label="Venue photos">
+            {venueImages.map((image) => (
+              <li>
+                <button
+                  class="event-venue__thumbnail"
+                  type="button"
+                  data-venue-photo
+                  data-src={image.src}
+                  data-alt={image.alt}
+                  data-description={image.description}
+                  data-width={image.width}
+                  data-height={image.height}
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    width={image.width}
+                    height={image.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="visually-hidden">Open full-size preview</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <dialog class="venue-preview" aria-labelledby="venue-preview-title" data-venue-dialog>
+          <div class="venue-preview__shell">
+            <h2 class="visually-hidden" id="venue-preview-title">Venue photo preview</h2>
+            <button class="venue-preview__close" type="button" aria-label="Close venue photo preview" data-venue-close autofocus>
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M3 3l10 10M13 3 3 13" />
+              </svg>
+            </button>
+
+            <figure class="venue-preview__viewer">
+              <div class="venue-preview__viewport" data-venue-viewport>
+                <div class="venue-preview__picture" data-venue-picture>
+                  <img
+                    class="venue-preview__image"
+                    src={firstVenueImage.src}
+                    alt={firstVenueImage.alt}
+                    width={firstVenueImage.width}
+                    height={firstVenueImage.height}
+                    decoding="async"
+                    data-venue-preview-image
+                  />
+                </div>
+              </div>
+              <figcaption class="venue-preview__caption" id="venue-preview-caption" aria-live="polite" data-venue-caption>
+                <span class="venue-preview__counter" data-venue-counter>1 / {venueImages.length}</span>
+                <p data-venue-description>{firstVenueImage.description}</p>
+              </figcaption>
+            </figure>
+
+            <div class="venue-preview__controls" role="group" aria-label="Venue photo controls">
+              <button class="button button--quiet button--compact" type="button" data-venue-previous>
+                <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="M13 8H3m0 0 4-4M3 8l4 4" />
+                </svg>
+                Previous
+              </button>
+              <button class="button button--quiet button--compact" type="button" aria-pressed="false" data-venue-zoom>Zoom in</button>
+              <button
+                class="button button--quiet button--compact"
+                type="button"
+                aria-controls="venue-preview-caption"
+                aria-expanded="true"
+                data-venue-details
+              >
+                Hide details
+              </button>
+              <button class="button button--quiet button--compact" type="button" data-venue-next>
+                Next
+                <svg class="button__icon venue-preview__next-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="M3 8h10m0 0-4-4m4 4-4 4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      </>
+    )}
 
     <section class="event-schedule" aria-labelledby="schedule-title">
       <SectionHeading eyebrow="Run of show" id="schedule-title" title="Schedule" />

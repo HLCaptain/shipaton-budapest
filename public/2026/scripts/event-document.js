@@ -1,3 +1,101 @@
+const initVenueGallery = () => {
+  const gallery = document.querySelector("[data-venue-gallery]");
+  const dialog = document.querySelector("[data-venue-dialog]");
+  if (!gallery || !dialog || gallery.dataset.venueGalleryBound) return;
+
+  const photos = [...gallery.querySelectorAll("[data-venue-photo]")];
+  const image = dialog.querySelector("[data-venue-preview-image]");
+  const picture = dialog.querySelector("[data-venue-picture]");
+  const viewport = dialog.querySelector("[data-venue-viewport]");
+  const caption = dialog.querySelector("[data-venue-caption]");
+  const counter = dialog.querySelector("[data-venue-counter]");
+  const description = dialog.querySelector("[data-venue-description]");
+  const zoom = dialog.querySelector("[data-venue-zoom]");
+  const details = dialog.querySelector("[data-venue-details]");
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+  if (!photos.length || !image || !picture || !viewport || !caption || !counter || !description || !zoom || !details) return;
+  gallery.dataset.venueGalleryBound = "true";
+
+  let currentIndex = 0;
+  let opener;
+
+  const setZoom = (zoomed) => {
+    dialog.toggleAttribute("data-zoomed", zoomed);
+    zoom.setAttribute("aria-pressed", String(zoomed));
+    zoom.textContent = zoomed ? "Zoom out" : "Zoom in";
+    if (!zoomed) viewport.scrollTo(0, 0);
+  };
+
+  const setDetails = (visible) => {
+    caption.hidden = !visible;
+    details.setAttribute("aria-expanded", String(visible));
+    details.textContent = visible ? "Hide details" : "Show details";
+  };
+
+  const renderPhoto = (index) => {
+    const photo = photos[index];
+    currentIndex = index;
+    image.src = photo.dataset.src;
+    image.alt = photo.dataset.alt;
+    image.width = Number(photo.dataset.width);
+    image.height = Number(photo.dataset.height);
+    description.textContent = photo.dataset.description;
+    counter.textContent = `${index + 1} / ${photos.length}`;
+    setZoom(false);
+  };
+
+  const selectPhoto = (index, direction) => {
+    if (index === currentIndex) return;
+    const apply = () => renderPhoto(index);
+    if (reducedMotion.matches) return apply();
+
+    picture.getAnimations().forEach((animation) => animation.cancel());
+    const outgoing = picture.animate([
+      { opacity: 1, transform: "translateX(0)" },
+      { opacity: 0, transform: `translateX(${direction * -14}px)` }
+    ], { duration: 140, easing: "ease-in", fill: "forwards" });
+
+    outgoing.onfinish = () => {
+      outgoing.cancel();
+      apply();
+      picture.animate([
+        { opacity: 0, transform: `translateX(${direction * 14}px)` },
+        { opacity: 1, transform: "translateX(0)" }
+      ], { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+    };
+  };
+
+  const move = (direction) => selectPhoto((currentIndex + direction + photos.length) % photos.length, direction);
+
+  photos.forEach((photo, index) => photo.addEventListener("click", () => {
+    opener = photo;
+    renderPhoto(index);
+    setDetails(true);
+    dialog.showModal();
+  }));
+
+  dialog.querySelector("[data-venue-close]").addEventListener("click", () => dialog.close());
+  dialog.querySelector("[data-venue-previous]").addEventListener("click", () => move(-1));
+  dialog.querySelector("[data-venue-next]").addEventListener("click", () => move(1));
+  zoom.addEventListener("click", () => setZoom(!dialog.hasAttribute("data-zoomed")));
+  image.addEventListener("click", () => setZoom(!dialog.hasAttribute("data-zoomed")));
+  details.addEventListener("click", () => setDetails(caption.hidden));
+
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    move(event.key === "ArrowLeft" ? -1 : 1);
+  });
+
+  dialog.addEventListener("close", () => {
+    picture.getAnimations().forEach((animation) => animation.cancel());
+    setZoom(false);
+    setDetails(true);
+    opener?.focus();
+  });
+};
+
 const initEventDocument = () => {
   const backLink = document.querySelector("[data-history-back]");
   if (backLink && !backLink.dataset.historyBackBound) {
@@ -18,6 +116,8 @@ const initEventDocument = () => {
       }
     });
   }
+
+  initVenueGallery();
 
   const article = document.querySelector(".event-document__body");
   const copyStatus = document.querySelector("[data-heading-copy-status]");

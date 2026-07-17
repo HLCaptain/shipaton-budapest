@@ -363,6 +363,155 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/$/);
 });
 
+test("previews venue photos accessibly", async ({ page }) => {
+  await page.goto("/2026/events/project-kickoff/");
+
+  const alts = [
+    "Sixth-floor terrace with long tables, chairs and views over the city rooftops",
+    "Open lounge around the staircase with a café counter, built-in seating and hanging lights",
+    "Bright sixth-floor open space with tables, chairs, plants and floor-to-ceiling windows"
+  ];
+  const descriptions = [
+    "The terrace runs alongside the sixth-floor event space, with outdoor tables beneath retractable awnings and views across Budapest.",
+    "This quieter area behind the staircase can be arranged with tables as a hands-on workspace for teams.",
+    "The main space can be rearranged with rows of chairs for attendees. A large presentation display sits just beyond the left edge of the photo; the venue has previously hosted groups of around 30–40 people."
+  ];
+  const sources = [
+    "/2026/events/project-kickoff-venue-terrace.jpg",
+    "/2026/events/project-kickoff-venue-workspace.jpg",
+    "/2026/events/project-kickoff-venue-main-room.jpg"
+  ];
+  const rail = page.getByRole("list", { name: "Venue photos" });
+  const thumbnails = rail.getByRole("button");
+  await expect(thumbnails).toHaveCount(3);
+  for (let index = 0; index < alts.length; index += 1) {
+    const thumbnail = thumbnails.nth(index).getByRole("img", { name: alts[index] });
+    await expect(thumbnail).toHaveAttribute("src", sources[index]);
+  }
+  await expect(page.getByText(descriptions[0], { exact: true })).not.toBeVisible();
+
+  const railLayout = await rail.evaluate((list) => {
+    const boxes = [...list.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
+    return {
+      display: getComputedStyle(list).display,
+      documentOverflow: document.documentElement.scrollWidth > window.innerWidth,
+      overflowX: getComputedStyle(list).overflowX,
+      sameRow: boxes.every(({ y }) => Math.abs(y - boxes[0].y) < 1),
+      scrollable: list.scrollWidth > list.clientWidth
+    };
+  });
+  expect(railLayout).toEqual({
+    display: "flex",
+    documentOverflow: false,
+    overflowX: "auto",
+    sameRow: true,
+    scrollable: true
+  });
+
+  const opener = thumbnails.first();
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Venue photo preview" });
+  const preview = dialog.getByRole("img", { name: alts[0] });
+  const caption = dialog.locator("[data-venue-caption]");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Close venue photo preview" })).toBeVisible();
+  await expect(preview).toHaveAttribute("src", sources[0]);
+  await expect(dialog.locator("[data-venue-counter]")).toHaveText("1 / 3");
+  await expect(dialog.getByText(descriptions[0], { exact: true })).toBeVisible();
+  await expect(caption).toHaveCSS("background-color", "rgba(13, 10, 22, 0.92)");
+  await expect(caption).toHaveCSS("color", "rgb(255, 250, 243)");
+  expect(await preview.evaluate((image) => {
+    const source = image as HTMLImageElement;
+    const box = image.getBoundingClientRect();
+    return Math.abs(box.width / box.height - source.naturalWidth / source.naturalHeight);
+  })).toBeLessThan(0.01);
+
+  const details = dialog.getByRole("button", { name: "Hide details" });
+  await expect(details).toHaveAttribute("aria-expanded", "true");
+  await details.click();
+  await expect(caption).toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Show details" })).toHaveAttribute("aria-expanded", "false");
+  await dialog.getByRole("button", { name: "Show details" }).click();
+  await expect(caption).toBeVisible();
+
+  const zoom = dialog.getByRole("button", { name: "Zoom in" });
+  await zoom.click();
+  await expect(dialog).toHaveAttribute("data-zoomed", "");
+  await expect(dialog.getByRole("button", { name: "Zoom out" })).toHaveAttribute("aria-pressed", "true");
+  expect(await preview.evaluate((image) => getComputedStyle(image).transform)).not.toBe("none");
+  await expect.poll(() => dialog.locator("[data-venue-viewport]").evaluate((viewport) => (
+    viewport.scrollWidth > viewport.clientWidth
+  ))).toBe(true);
+
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("src", sources[1]);
+  await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("alt", alts[1]);
+  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
+  await expect(dialog.getByText(descriptions[1], { exact: true })).toBeVisible();
+  await expect(dialog).not.toHaveAttribute("data-zoomed");
+  await expect(dialog.getByRole("button", { name: "Zoom in" })).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("ArrowLeft");
+  await expect(dialog.locator("[data-venue-counter]")).toHaveText("1 / 3");
+
+  await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+});
+
+test("animates the venue preview and respects reduced motion", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Motion treatment is covered once at desktop size");
+  await page.goto("/2026/events/project-kickoff/");
+
+  const dialog = page.locator("[data-venue-dialog]");
+  const picture = dialog.locator("[data-venue-picture]");
+  const transitionMs = await dialog.evaluate((element) => {
+    const duration = (value: string) => Math.max(...value.split(",").map((item) => {
+      const time = item.trim();
+      return Number.parseFloat(time) * (time.endsWith("ms") ? 1 : 1000);
+    }));
+    return {
+      backdrop: duration(getComputedStyle(element, "::backdrop").transitionDuration),
+      dialog: duration(getComputedStyle(element).transitionDuration),
+      zoom: duration(getComputedStyle(element.querySelector("[data-venue-preview-image]")!).transitionDuration)
+    };
+  });
+  expect(transitionMs.dialog).toBeGreaterThanOrEqual(200);
+  expect(transitionMs.backdrop).toBeGreaterThanOrEqual(200);
+  expect(transitionMs.zoom).toBeGreaterThanOrEqual(250);
+
+  await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  expect(await dialog.evaluate((element) => element.getAnimations().some((animation) => (
+    Number(animation.effect?.getTiming().duration) >= 200
+  )))).toBe(true);
+  await dialog.getByRole("button", { name: "Next" }).click();
+  expect(await picture.evaluate((element) => element.getAnimations().some((animation) => (
+    Number(animation.effect?.getTiming().duration) >= 140
+  )))).toBe(true);
+  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
+  await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
+  expect(await dialog.evaluate((element) => (
+    !element.hasAttribute("open")
+    && getComputedStyle(element).display === "block"
+    && element.getAnimations().some((animation) => Number(animation.effect?.getTiming().duration) >= 200)
+  ))).toBe(true);
+  await expect(dialog).toBeHidden();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const reducedTransitionMs = await dialog.evaluate((element) => {
+    const time = getComputedStyle(element).transitionDuration;
+    return Number.parseFloat(time) * (time.endsWith("ms") ? 1 : 1000);
+  });
+  expect(reducedTransitionMs).toBeLessThanOrEqual(0.01);
+  await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  await dialog.getByRole("button", { name: "Next" }).click();
+  await expect(dialog.locator("[data-venue-counter]")).toHaveText("2 / 3");
+  expect(await picture.evaluate((element) => element.getAnimations())).toHaveLength(0);
+});
+
 test("keeps page motion directional and stable from a scrolled route", async ({ page }) => {
   await page.goto("/2026/");
 
@@ -484,6 +633,9 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await page.getByRole("link", { name: "Back to 2026 events", exact: true }).click();
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
+  await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  await expect(page.getByRole("dialog", { name: "Venue photo preview" })).toBeVisible();
+  await page.getByRole("button", { name: "Close venue photo preview" }).click();
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
   await expect(page).toHaveURL(/\/2026\/$/);
