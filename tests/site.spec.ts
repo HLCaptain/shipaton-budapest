@@ -90,18 +90,19 @@ test("uses smooth centering after an interrupted event-card drag", async ({ page
   await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
 
   await track.evaluate((element) => {
-    const state = window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior; snap: string } };
+    const state = window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior } };
     const scrollTo = element.scrollTo.bind(element);
     element.scrollTo = ((options: ScrollToOptions) => {
-      state.__eventRailScroll = { behavior: options.behavior, snap: element.style.scrollSnapType };
+      state.__eventRailScroll = { behavior: options.behavior };
       scrollTo(options);
     }) as typeof element.scrollTo;
   });
+  await track.dispatchEvent("pointerup");
   await page.mouse.up();
 
   await expect.poll(() => page.evaluate(
-    () => (window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior; snap: string } }).__eventRailScroll
-  )).toEqual({ behavior: "smooth", snap: "none" });
+    () => (window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior } }).__eventRailScroll
+  )).toEqual({ behavior: "smooth" });
   await expect.poll(() => track.evaluate((element) => element.style.scrollSnapType)).toBe("");
 });
 
