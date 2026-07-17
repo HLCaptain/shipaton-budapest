@@ -69,6 +69,51 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
   expect(consoleErrors).toEqual([]);
 });
 
+test("smoothly settles an interrupted event-card drag", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Mouse drag regression is covered at desktop size");
+  await page.goto("/2026/");
+
+  const track = page.locator("[data-event-track]");
+  const trackBox = await track.boundingBox();
+  expect(trackBox).not.toBeNull();
+  await page.mouse.move(trackBox!.x + trackBox!.width / 2, trackBox!.y + trackBox!.height / 2);
+  await page.mouse.down();
+
+  const finalTarget = await track.evaluate((element) => {
+    const cards = [...element.querySelectorAll<HTMLElement>("[data-event-rail-card]")];
+    const card = cards.at(-1)!;
+    const margin = Number.parseFloat(getComputedStyle(card).scrollMarginInlineStart) || 0;
+    const left = card.offsetLeft - (element.clientWidth - card.offsetWidth) / 2 - margin / 2;
+    const target = Math.max(0, Math.min(left, element.scrollWidth - element.clientWidth));
+    element.scrollLeft = target - 200;
+    return target;
+  });
+  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
+
+  await page.evaluate(() => {
+    const state = window as Window & { __eventRailSamples?: number[] };
+    const track = document.querySelector<HTMLElement>("[data-event-track]")!;
+    state.__eventRailSamples = [];
+    const sample = () => {
+      state.__eventRailSamples!.push(track.scrollLeft);
+      if (state.__eventRailSamples!.length < 12) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.mouse.up();
+
+  await expect.poll(() => page.evaluate(
+    () => (window as Window & { __eventRailSamples?: number[] }).__eventRailSamples?.length
+  )).toBe(12);
+  const samples = await page.evaluate(
+    () => (window as Window & { __eventRailSamples?: number[] }).__eventRailSamples!
+  );
+  expect(Math.abs(samples[0] - finalTarget)).toBeGreaterThan(10);
+  expect(new Set(samples.map(Math.round)).size).toBeGreaterThan(3);
+  expect(Math.abs(samples.at(-1)! - finalTarget)).toBeLessThan(Math.abs(samples[0] - finalTarget));
+  await expect.poll(() => track.evaluate((element) => element.style.scrollSnapType)).toBe("");
+});
+
 test("invites ideas for a potential event before the competition deadline", async ({ page }) => {
   await page.goto("/2026/");
 

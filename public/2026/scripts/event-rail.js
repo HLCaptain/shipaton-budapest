@@ -36,12 +36,10 @@ const initEventRail = () => {
   let centerTarget = null;
   let initialFrame = 0;
   let scrollFrame = 0;
-  let snapTimer = 0;
 
   const cleanup = () => {
     cancelAnimationFrame(initialFrame);
     cancelAnimationFrame(scrollFrame);
-    window.clearTimeout(snapTimer);
     controller.abort();
   };
 
@@ -67,6 +65,17 @@ const initEventRail = () => {
     track.scrollTo({ left, behavior: smooth && !reducedMotion ? "smooth" : "auto" });
   };
 
+  const closestCardIndex = () => {
+    const railCenter = track.getBoundingClientRect().left + track.clientWidth / 2;
+    return cards.reduce((closest, card, index) => {
+      const rect = card.getBoundingClientRect();
+      const distance = Math.abs(rect.left + rect.width / 2 - railCenter);
+      const closestRect = cards[closest].getBoundingClientRect();
+      const closestDistance = Math.abs(closestRect.left + closestRect.width / 2 - railCenter);
+      return distance < closestDistance ? index : closest;
+    }, 0);
+  };
+
   const selectCard = (index, scroll = false) => {
     const nextIndex = Math.max(0, Math.min(cards.length - 1, index));
     if (activeIndex === nextIndex) {
@@ -86,6 +95,11 @@ const initEventRail = () => {
       button.disabled = direction < 0 ? activeIndex === 0 : activeIndex === cards.length - 1;
     });
     if (scroll) centerCard(cards[activeIndex], true);
+  };
+
+  const settleSelection = () => {
+    selectCard(closestCardIndex(), true);
+    if (centerTarget === null) restoreSnapping();
   };
 
   const firstUpcoming = cards.findIndex((card) => Boolean(card.dataset.date) && card.dataset.date >= today);
@@ -140,14 +154,7 @@ const initEventRail = () => {
   };
   const cancelCentering = () => { centerTarget = null; };
   track.addEventListener("pointerdown", pauseCentering, { capture: true, passive: true, signal });
-  window.addEventListener(
-    "pointerup",
-    () => {
-      window.clearTimeout(snapTimer);
-      snapTimer = window.setTimeout(restoreSnapping);
-    },
-    { passive: true, signal }
-  );
+  window.addEventListener("pointerup", settleSelection, { passive: true, signal });
   window.addEventListener("pointercancel", restoreSnapping, { passive: true, signal });
   track.addEventListener("wheel", cancelCentering, { passive: true, signal });
   track.addEventListener("keydown", cancelCentering, { signal });
@@ -158,18 +165,13 @@ const initEventRail = () => {
       cancelAnimationFrame(scrollFrame);
       scrollFrame = requestAnimationFrame(() => {
         if (centerTarget !== null) {
-          if (Math.abs(track.scrollLeft - centerTarget) < 1) centerTarget = null;
+          if (Math.abs(track.scrollLeft - centerTarget) < 1) {
+            centerTarget = null;
+            restoreSnapping();
+          }
           return;
         }
-        const railCenter = track.getBoundingClientRect().left + track.clientWidth / 2;
-        const closestIndex = cards.reduce((closest, card, index) => {
-          const rect = card.getBoundingClientRect();
-          const distance = Math.abs(rect.left + rect.width / 2 - railCenter);
-          const closestRect = cards[closest].getBoundingClientRect();
-          const closestDistance = Math.abs(closestRect.left + closestRect.width / 2 - railCenter);
-          return distance < closestDistance ? index : closest;
-        }, 0);
-        selectCard(closestIndex);
+        selectCard(closestCardIndex());
       });
     },
     { passive: true, signal }
