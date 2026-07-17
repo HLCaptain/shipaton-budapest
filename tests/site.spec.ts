@@ -271,6 +271,13 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
         startDelta: Math.abs(number(connector.top) - number(marker.top) - markerSize(marker, "height"))
       };
     });
+    const markerTextDeltas = items.map((item) => {
+      const marker = getComputedStyle(item, "::before");
+      const itemBox = item.getBoundingClientRect();
+      const timeBox = item.querySelector<HTMLElement>(".event-schedule__time")!.getBoundingClientRect();
+      const markerCenter = itemBox.top + number(marker.top) + markerSize(marker, "height") / 2;
+      return Math.abs(markerCenter - (timeBox.top + timeBox.height / 2));
+    });
     const time = items[0].querySelector<HTMLElement>(".event-schedule__time")!;
     const heading = items[0].querySelector<HTMLElement>("h3")!;
     return {
@@ -279,6 +286,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
       markerWidth: getComputedStyle(items[0], "::before").borderTopWidth,
       maxCenterDelta: Math.max(...geometry.map(({ centerDelta }) => centerDelta)),
       maxEndDelta: Math.max(...geometry.map(({ endDelta }) => endDelta)),
+      maxMarkerTextDelta: Math.max(...markerTextDeltas),
       maxStartDelta: Math.max(...geometry.map(({ startDelta }) => startDelta)),
       timeBottom: time.getBoundingClientRect().bottom,
       timeFontSize: Number.parseFloat(getComputedStyle(time).fontSize)
@@ -288,6 +296,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   expect(scheduleLayout.markerWidth).toBe("2px");
   expect(scheduleLayout.maxCenterDelta).toBeLessThan(0.5);
   expect(scheduleLayout.maxEndDelta).toBeLessThan(0.5);
+  expect(scheduleLayout.maxMarkerTextDelta).toBeLessThan(0.5);
   expect(scheduleLayout.maxStartDelta).toBeLessThan(0.5);
   expect(scheduleLayout.timeFontSize).toBeGreaterThan(20);
   expect(scheduleLayout.headingTop).toBeGreaterThan(scheduleLayout.timeBottom);
