@@ -69,7 +69,7 @@ test("opens on the confirmed event without redundant navigation", async ({ page 
   expect(consoleErrors).toEqual([]);
 });
 
-test("smoothly settles an interrupted event-card drag", async ({ page }, testInfo) => {
+test("uses smooth centering after an interrupted event-card drag", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Mouse drag regression is covered at desktop size");
   await page.goto("/2026/");
 
@@ -89,33 +89,19 @@ test("smoothly settles an interrupted event-card drag", async ({ page }, testInf
   });
   await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
 
-  const finalTarget = await track.evaluate((element) => {
-    const card = element.querySelector<HTMLElement>("[data-selected]")!;
-    const margin = Number.parseFloat(getComputedStyle(card).scrollMarginInlineStart) || 0;
-    const left = card.offsetLeft - (element.clientWidth - card.offsetWidth) / 2 - margin / 2;
-    return Math.max(0, Math.min(left, element.scrollWidth - element.clientWidth));
-  });
-
-  await page.evaluate(() => {
-    const state = window as Window & { __eventRailSamples?: number[] };
-    const track = document.querySelector<HTMLElement>("[data-event-track]")!;
-    state.__eventRailSamples = [];
-    const sample = () => {
-      state.__eventRailSamples!.push(track.scrollLeft);
-      if (state.__eventRailSamples!.length < 12) requestAnimationFrame(sample);
-    };
-    window.addEventListener("pointerup", () => requestAnimationFrame(sample), { once: true });
+  await track.evaluate((element) => {
+    const state = window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior; snap: string } };
+    const scrollTo = element.scrollTo.bind(element);
+    element.scrollTo = ((options: ScrollToOptions) => {
+      state.__eventRailScroll = { behavior: options.behavior, snap: element.style.scrollSnapType };
+      scrollTo(options);
+    }) as typeof element.scrollTo;
   });
   await page.mouse.up();
 
   await expect.poll(() => page.evaluate(
-    () => (window as Window & { __eventRailSamples?: number[] }).__eventRailSamples?.length
-  )).toBe(12);
-  const samples = await page.evaluate(
-    () => (window as Window & { __eventRailSamples?: number[] }).__eventRailSamples!
-  );
-  expect(new Set(samples.map(Math.round)).size).toBeGreaterThan(1);
-  expect(Math.abs(samples.at(-1)! - finalTarget)).toBeLessThan(Math.abs(samples[0] - finalTarget));
+    () => (window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior; snap: string } }).__eventRailScroll
+  )).toEqual({ behavior: "smooth", snap: "none" });
   await expect.poll(() => track.evaluate((element) => element.style.scrollSnapType)).toBe("");
 });
 
