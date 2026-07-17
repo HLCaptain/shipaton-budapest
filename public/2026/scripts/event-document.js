@@ -24,6 +24,10 @@ const initVenueGallery = () => {
   let closeQueued = false;
   let zoomTimer;
 
+  const setDescription = (text) => {
+    if (description.textContent !== text) description.textContent = text;
+  };
+
   const setPreviewRatio = (width, height) => {
     if (!previewRule) {
       for (const sheet of document.styleSheets) {
@@ -54,12 +58,13 @@ const initVenueGallery = () => {
     active.animations.forEach((animation) => animation.cancel());
     active.incoming.remove();
     const photo = photos[currentIndex];
+    setDescription(photo.dataset.description);
     setPreviewRatio(Number(photo.dataset.width), Number(photo.dataset.height));
   };
 
   const setZoom = (zoomed, point) => {
-    window.clearTimeout(zoomTimer);
     if (zoomed) {
+      window.clearTimeout(zoomTimer);
       const bounds = image.getBoundingClientRect();
       const x = point ? Math.min(Math.max(point.x - bounds.left, 0), bounds.width) : bounds.width / 2;
       const y = point ? Math.min(Math.max(point.y - bounds.top, 0), bounds.height) : bounds.height / 2;
@@ -73,6 +78,16 @@ const initVenueGallery = () => {
         requestAnimationFrame(() => {
           if (dialog.hasAttribute("data-zoomed")) viewport.scrollTo({ left: x, top: y });
         });
+      }, reducedMotion.matches ? 0 : 280);
+    } else if (dialog.hasAttribute("data-zoomed")) {
+      window.clearTimeout(zoomTimer);
+      image.style.setProperty("--venue-zoom-x", `${viewport.scrollLeft}px`);
+      image.style.setProperty("--venue-zoom-y", `${viewport.scrollTop}px`);
+      zoomTimer = window.setTimeout(() => {
+        zoomTimer = null;
+        if (dialog.hasAttribute("data-zoomed")) return;
+        image.style.removeProperty("--venue-zoom-x");
+        image.style.removeProperty("--venue-zoom-y");
       }, reducedMotion.matches ? 0 : 280);
     }
 
@@ -91,7 +106,7 @@ const initVenueGallery = () => {
     image.alt = photo.dataset.alt;
     image.width = width;
     image.height = height;
-    description.textContent = photo.dataset.description;
+    setDescription(photo.dataset.description);
     setPreviewRatio(width, height);
     setZoom(false);
   };
@@ -135,7 +150,23 @@ const initVenueGallery = () => {
     ];
     const active = { animations, incoming };
     slide = active;
-    Promise.all(animations.map((animation) => animation.finished)).then(() => {
+    const fadeOut = description.animate([
+      { opacity: 1 },
+      { opacity: 0 }
+    ], { ...timing, duration: timing.duration / 2 });
+    active.animations.push(fadeOut);
+    const captionFinished = fadeOut.finished.then(() => {
+      if (slide !== active) return;
+      setDescription(photo.dataset.description);
+      fadeOut.cancel();
+      const fadeIn = description.animate([
+        { opacity: 0 },
+        { opacity: 1 }
+      ], { ...timing, duration: timing.duration / 2 });
+      active.animations.push(fadeIn);
+      return fadeIn.finished;
+    });
+    Promise.all([...animations.map((animation) => animation.finished), captionFinished]).then(() => {
       if (slide !== active) return;
       renderPhoto(index);
       clearSlide();

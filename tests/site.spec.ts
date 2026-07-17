@@ -387,7 +387,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   for (let index = 0; index < alts.length; index += 1) {
     const thumbnail = thumbnails.nth(index).getByRole("img", { name: alts[index] });
     await expect(thumbnail).toHaveAttribute("src", sources[index]);
-    await expect(thumbnail).toHaveCSS("object-fit", "contain");
+    await expect(thumbnail).toHaveCSS("object-fit", "cover");
   }
   await expect(page.getByText(descriptions[0], { exact: true })).not.toBeVisible();
 
@@ -455,6 +455,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   const dialog = page.getByRole("dialog", { name: "Venue photo preview" });
   const preview = dialog.getByRole("img", { name: alts[0] });
   const caption = dialog.locator("[data-venue-caption]");
+  const description = dialog.locator("[data-venue-description]");
   const picture = dialog.getByRole("button", { name: "Zoom in on venue photo" });
   await expect(dialog).toBeVisible();
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
@@ -642,12 +643,36 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   expect(panEnd.left).toBeLessThan(panStart.left - 40);
   expect(panEnd.top).toBeLessThan(panStart.top - 20);
 
+  const zoomOutStart = await viewport.evaluate((element) => {
+    const image = element.querySelector("[data-venue-preview-image]")!.getBoundingClientRect();
+    const box = element.getBoundingClientRect();
+    return { height: image.height, left: image.left - box.left, top: image.top - box.top, width: image.width };
+  });
+
   await page.mouse.click(
     viewportBox!.x + viewportBox!.width * 0.9,
     viewportBox!.y + viewportBox!.height * 0.25
   );
   await expect(dialog).not.toHaveAttribute("data-zoomed");
   await expect(picture).toHaveAttribute("aria-pressed", "false");
+  const zoomOutFirstFrame = await preview.evaluate((image) => {
+    const animation = image.getAnimations()[0];
+    animation.pause();
+    animation.currentTime = 0;
+    const box = image.closest("[data-venue-viewport]")!.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
+    const frame = {
+      height: imageBox.height,
+      left: imageBox.left - box.left,
+      top: imageBox.top - box.top,
+      width: imageBox.width
+    };
+    animation.play();
+    return frame;
+  });
+  for (const edge of ["height", "left", "top", "width"] as const) {
+    expect(zoomOutFirstFrame[edge]).toBeCloseTo(zoomOutStart[edge], 0);
+  }
   await expect.poll(() => viewport.evaluate((element) => [element.scrollLeft, element.scrollTop])).toEqual([0, 0]);
 
   const readSlide = () => dialog.evaluate((element) => {
@@ -678,6 +703,14 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     };
   });
 
+  await description.evaluate((element) => {
+    new MutationObserver((_, observer) => {
+      const frames = (element.getAnimations()[0].effect as KeyframeEffect).getKeyframes();
+      element.setAttribute("data-test-swap-opacity", getComputedStyle(element).opacity);
+      element.setAttribute("data-test-fade-in", JSON.stringify(frames.map(({ opacity }) => Number(opacity))));
+      observer.disconnect();
+    }).observe(element, { childList: true });
+  });
   await page.keyboard.press("ArrowRight");
   await expect(dialog.locator(".venue-preview__slide")).toHaveCount(1);
   const nextSlide = await readSlide();
@@ -698,6 +731,8 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   expect(nextDialogBox!.height).toBeCloseTo(nextSlide.endSize.height, 0);
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute("alt", alts[1]);
   await expect(dialog.getByText(descriptions[1], { exact: true })).toBeVisible();
+  expect(Number(await description.getAttribute("data-test-swap-opacity"))).toBeLessThan(0.1);
+  expect(JSON.parse((await description.getAttribute("data-test-fade-in"))!)).toEqual([0, 1]);
   await expect(dialog).not.toHaveAttribute("data-zoomed");
   await expect(picture).toHaveAttribute("aria-pressed", "false");
   await page.keyboard.press("ArrowLeft");
