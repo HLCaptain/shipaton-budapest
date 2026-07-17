@@ -681,6 +681,7 @@ svg {
 .event-card__description {
   max-width: 36rem;
   margin: 1.6rem 0 0;
+  padding-bottom: 1rem;
   color: rgb(255 250 243 / 0.8);
   font-size: 1rem;
   line-height: 1.65;
