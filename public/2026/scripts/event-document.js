@@ -13,6 +13,9 @@ const initVenueGallery = () => {
 
   if (!photos.length || !image || !picture || !viewport || !description) return;
   gallery.dataset.venueGalleryBound = "true";
+  photos.forEach((photo) => {
+    photo.style.backgroundImage = `url("${photo.dataset.src}")`;
+  });
 
   let currentIndex = 0;
   let opener;

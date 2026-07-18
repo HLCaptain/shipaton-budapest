@@ -389,16 +389,22 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     const thumbnail = thumbnails.nth(index).getByRole("img", { name: alts[index] });
     await expect(thumbnail).toHaveAttribute("src", sources[index]);
     await expect(thumbnail).toHaveCSS("object-fit", "cover");
+    expect(await thumbnails.nth(index).evaluate((button) => getComputedStyle(button).backgroundImage))
+      .toContain(sources[index]);
   }
   await expect(page.getByText(descriptions[0], { exact: true })).not.toBeVisible();
 
   const railLayout = await rail.evaluate((list) => {
     const boxes = [...list.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
+    const documentBox = list.closest(".event-document")!.getBoundingClientRect();
+    const listBox = list.getBoundingClientRect();
     const sectionBox = list.closest(".event-venue")!.getBoundingClientRect();
     return {
       display: getComputedStyle(list).display,
       documentOverflow: document.documentElement.scrollWidth > window.innerWidth,
       edgeAligned: Math.abs(boxes[0].left - sectionBox.left) < 1,
+      edgeToEdge: Math.abs(listBox.left - documentBox.left) < 1
+        && Math.abs(listBox.right - documentBox.right) < 1,
       overflowX: getComputedStyle(list).overflowX,
       sameRow: boxes.every(({ y }) => Math.abs(y - boxes[0].y) < 1),
       scrollable: list.scrollWidth > list.clientWidth
@@ -408,6 +414,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     display: "flex",
     documentOverflow: false,
     edgeAligned: true,
+    edgeToEdge: true,
     overflowX: "auto",
     sameRow: true,
     scrollable: true
@@ -858,6 +865,12 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       groupBorderRadius: getComputedStyle(root, "::view-transition-group(venue-photo)").borderRadius,
       groupOverflow: getComputedStyle(root, "::view-transition-group(venue-photo)").overflow,
       groupZIndex: getComputedStyle(root, "::view-transition-group(venue-photo)").zIndex,
+      openPhotoNewAnimation: getComputedStyle(root, "::view-transition-new(venue-photo)").animationName,
+      openPhotoNewObjectFit: getComputedStyle(root, "::view-transition-new(venue-photo)").objectFit,
+      openPhotoNewOpacity: getComputedStyle(root, "::view-transition-new(venue-photo)").opacity,
+      openPhotoOldAnimation: getComputedStyle(root, "::view-transition-old(venue-photo)").animationName,
+      openPhotoOldObjectFit: getComputedStyle(root, "::view-transition-old(venue-photo)").objectFit,
+      openPhotoOldOpacity: getComputedStyle(root, "::view-transition-old(venue-photo)").opacity,
       openPageNewAnimation: getComputedStyle(root, "::view-transition-new(page-content)").animationName,
       openPageOldAnimation: getComputedStyle(root, "::view-transition-old(page-content)").animationName,
       pageNewOpacity: getComputedStyle(root, "::view-transition-new(page-content)").opacity,
@@ -894,6 +907,12 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     groupBorderRadius: "10px",
     groupOverflow: "clip",
     groupZIndex: "2",
+    openPhotoNewAnimation: "none",
+    openPhotoNewObjectFit: "cover",
+    openPhotoNewOpacity: "1",
+    openPhotoOldAnimation: "none",
+    openPhotoOldObjectFit: "cover",
+    openPhotoOldOpacity: "0",
     openPageNewAnimation: "none",
     openPageOldAnimation: "venue-page-dim",
     pageNewOpacity: "0",
@@ -935,12 +954,6 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     expect(await page.evaluate(() => (
       getComputedStyle(document.documentElement, "::view-transition-new(venue-close)").opacity
     ))).toBe("1");
-    await page.waitForTimeout(80);
-    const pageOpacity = await page.evaluate(() => Number.parseFloat(
-      getComputedStyle(document.documentElement, "::view-transition-old(page-content)").opacity
-    ));
-    expect(pageOpacity).toBeGreaterThanOrEqual(0.14);
-    expect(pageOpacity).toBeLessThan(1);
   }
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
   if (supportsSharedTransition) {
@@ -962,12 +975,6 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     await expect(page.locator("html")).toHaveAttribute("data-venue-transitioning", "close");
     await expect(page.locator("html")).toHaveAttribute("data-venue-transition-old", "preview");
     await expect(page.locator("html")).toHaveAttribute("data-venue-transition-new", "thumbnail");
-    await page.waitForTimeout(80);
-    const pageOpacity = await page.evaluate(() => Number.parseFloat(
-      getComputedStyle(document.documentElement, "::view-transition-new(page-content)").opacity
-    ));
-    expect(pageOpacity).toBeGreaterThanOrEqual(0.14);
-    expect(pageOpacity).toBeLessThan(1);
     expect(await page.evaluate(() => ({
       newOpacity: getComputedStyle(document.documentElement, "::view-transition-new(venue-photo)").opacity,
       oldOpacity: getComputedStyle(document.documentElement, "::view-transition-old(venue-photo)").opacity

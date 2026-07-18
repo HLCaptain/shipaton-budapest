@@ -1089,13 +1089,13 @@ a.event-card__soon:hover {
 
 .event-venue__rail {
   display: flex;
-  margin: -1rem;
-  padding: 1rem;
+  margin: -1rem calc(-1 * var(--page-gutter));
+  padding: 1rem var(--page-gutter);
   gap: 1rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-color: var(--orange-dark) var(--line);
-  scroll-padding-inline: 1rem;
+  scroll-padding-inline: var(--page-gutter);
   scroll-snap-type: x mandatory;
   list-style: none;
 }
@@ -1117,6 +1117,9 @@ a.event-card__soon:hover {
   border: 2px solid var(--space);
   border-radius: var(--radius);
   background: var(--space);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, translate 180ms ease;
 }
 
@@ -1179,20 +1182,22 @@ a.event-card__soon:hover {
   animation-timing-function: var(--ease);
 }
 
-:root[data-venue-transitioning="close"]::view-transition-old(venue-photo),
-:root[data-venue-transitioning="close"]::view-transition-new(venue-photo) {
+:root[data-venue-transitioning]::view-transition-old(venue-photo),
+:root[data-venue-transitioning]::view-transition-new(venue-photo) {
   height: 100%;
   animation: none;
   mix-blend-mode: normal;
   object-fit: cover;
 }
 
-:root[data-venue-transitioning="close"]::view-transition-old(venue-photo) {
-  opacity: 1;
-}
-
+:root[data-venue-transitioning="open"]::view-transition-old(venue-photo),
 :root[data-venue-transitioning="close"]::view-transition-new(venue-photo) {
   opacity: 0;
+}
+
+:root[data-venue-transitioning="open"]::view-transition-new(venue-photo),
+:root[data-venue-transitioning="close"]::view-transition-old(venue-photo) {
+  opacity: 1;
 }
 
 ::view-transition-group(venue-close) {
