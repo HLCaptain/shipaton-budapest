@@ -43,17 +43,6 @@ body {
   background: var(--canvas);
 }
 
-body::before {
-  position: fixed;
-  z-index: -1;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgb(40 32 71 / 0.055) 1px, transparent 1px) 0 0 / 28px 28px,
-    linear-gradient(0deg, rgb(40 32 71 / 0.055) 1px, transparent 1px) 0 0 / 28px 28px;
-  content: "";
-  pointer-events: none;
-}
-
 html[data-astro-transition] {
   scroll-behavior: auto;
 }
@@ -1184,8 +1173,26 @@ a.event-card__soon:hover {
 
 ::view-transition-group(venue-photo) {
   z-index: 2;
+  overflow: clip;
+  border-radius: var(--radius);
   animation-duration: 320ms;
   animation-timing-function: var(--ease);
+}
+
+:root[data-venue-transitioning="close"]::view-transition-old(venue-photo),
+:root[data-venue-transitioning="close"]::view-transition-new(venue-photo) {
+  height: 100%;
+  animation: none;
+  mix-blend-mode: normal;
+  object-fit: cover;
+}
+
+:root[data-venue-transitioning="close"]::view-transition-old(venue-photo) {
+  opacity: 1;
+}
+
+:root[data-venue-transitioning="close"]::view-transition-new(venue-photo) {
+  opacity: 0;
 }
 
 ::view-transition-group(venue-close) {

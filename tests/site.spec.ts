@@ -119,6 +119,7 @@ test("keeps content inside the viewport and exposes the important links", async 
 
   const hasPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(hasPageOverflow).toBe(false);
+  expect(await page.evaluate(() => getComputedStyle(document.body, "::before").backgroundImage)).toBe("none");
 
   const pageWeight = await page.evaluate(() => {
     const entries = [
@@ -854,6 +855,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       closeGroupZIndex: getComputedStyle(root, "::view-transition-group(venue-close)").zIndex,
       dialogScale: getComputedStyle(document.querySelector("[data-venue-dialog]")!).scale,
       dialogTranslate: getComputedStyle(document.querySelector("[data-venue-dialog]")!).translate,
+      groupBorderRadius: getComputedStyle(root, "::view-transition-group(venue-photo)").borderRadius,
+      groupOverflow: getComputedStyle(root, "::view-transition-group(venue-photo)").overflow,
       groupZIndex: getComputedStyle(root, "::view-transition-group(venue-photo)").zIndex,
       openPageNewAnimation: getComputedStyle(root, "::view-transition-new(page-content)").animationName,
       openPageOldAnimation: getComputedStyle(root, "::view-transition-old(page-content)").animationName,
@@ -861,6 +864,12 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       rootNewOpacity: getComputedStyle(root, "::view-transition-new(root)").opacity,
     };
     root.dataset.venueTransitioning = "close";
+    treatment.closePhotoNewAnimation = getComputedStyle(root, "::view-transition-new(venue-photo)").animationName;
+    treatment.closePhotoNewObjectFit = getComputedStyle(root, "::view-transition-new(venue-photo)").objectFit;
+    treatment.closePhotoNewOpacity = getComputedStyle(root, "::view-transition-new(venue-photo)").opacity;
+    treatment.closePhotoOldAnimation = getComputedStyle(root, "::view-transition-old(venue-photo)").animationName;
+    treatment.closePhotoOldObjectFit = getComputedStyle(root, "::view-transition-old(venue-photo)").objectFit;
+    treatment.closePhotoOldOpacity = getComputedStyle(root, "::view-transition-old(venue-photo)").opacity;
     treatment.closePageNewAnimation = getComputedStyle(root, "::view-transition-new(page-content)").animationName;
     treatment.closePageOldOpacity = getComputedStyle(root, "::view-transition-old(page-content)").opacity;
     treatment.closeRootOldOpacity = getComputedStyle(root, "::view-transition-old(root)").opacity;
@@ -873,9 +882,17 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     closeGroupZIndex: "3",
     closePageNewAnimation: "venue-page-reveal",
     closePageOldOpacity: "0",
+    closePhotoNewAnimation: "none",
+    closePhotoNewObjectFit: "cover",
+    closePhotoNewOpacity: "0",
+    closePhotoOldAnimation: "none",
+    closePhotoOldObjectFit: "cover",
+    closePhotoOldOpacity: "1",
     closeRootOldOpacity: "0",
     dialogScale: "none",
     dialogTranslate: "none",
+    groupBorderRadius: "10px",
+    groupOverflow: "clip",
     groupZIndex: "2",
     openPageNewAnimation: "none",
     openPageOldAnimation: "venue-page-dim",
@@ -893,6 +910,11 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
         ? "preview"
         : document.querySelector("[data-venue-photo] img[data-venue-transition]") ? "thumbnail" : "none";
       root.dataset.venueTransitionOld = phase();
+      const source = document.querySelector<HTMLElement>("[data-venue-transition]");
+      if (source) {
+        const { x, y, width, height } = source.getBoundingClientRect();
+        root.dataset.venueTransitionSourceBox = JSON.stringify({ x, y, width, height });
+      }
       return start(async () => {
         await update?.();
         root.dataset.venueTransitionNew = phase();
@@ -946,6 +968,10 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     ));
     expect(pageOpacity).toBeGreaterThanOrEqual(0.14);
     expect(pageOpacity).toBeLessThan(1);
+    expect(await page.evaluate(() => ({
+      newOpacity: getComputedStyle(document.documentElement, "::view-transition-new(venue-photo)").opacity,
+      oldOpacity: getComputedStyle(document.documentElement, "::view-transition-old(venue-photo)").opacity
+    }))).toEqual({ newOpacity: "0", oldOpacity: "1" });
   }
   await expect(dialog).toBeHidden();
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
@@ -961,10 +987,28 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   await expect(dialog).toBeHidden();
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
 
+  await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
+  const normalPreviewBox = await dialog.locator("[data-venue-preview-image]").boundingBox();
+  await picture.click();
+  await expect(dialog).toHaveAttribute("data-zoomed", "");
+  await expect.poll(async () => (await dialog.locator("[data-venue-preview-image]").boundingBox())!.width)
+    .toBeGreaterThan(normalPreviewBox!.width * 1.9);
+  await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
+  if (supportsSharedTransition) {
+    await expect(page.locator("html")).toHaveAttribute("data-venue-transitioning", "close");
+    const sourceBox = JSON.parse((await page.locator("html").getAttribute("data-venue-transition-source-box"))!);
+    expect(sourceBox.width).toBeCloseTo(normalPreviewBox!.width, 0);
+    expect(sourceBox.height).toBeCloseTo(normalPreviewBox!.height, 0);
+  }
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
+
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.locator("html").evaluate((element) => {
     delete element.dataset.venueTransitionOld;
     delete element.dataset.venueTransitionNew;
+    delete element.dataset.venueTransitionSourceBox;
     delete element.dataset.venueTransitionTargetBox;
   });
   const reducedTransitionMs = await dialog.evaluate((element) => {

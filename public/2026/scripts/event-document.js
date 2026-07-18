@@ -222,6 +222,13 @@ const initVenueGallery = () => {
       return;
     }
 
+    if (dialog.hasAttribute("data-zoomed")) {
+      image.style.setProperty("transition", "none");
+      setZoom(false);
+      image.getBoundingClientRect();
+      image.style.removeProperty("transition");
+    }
+
     photo.scrollIntoView({ behavior: "instant", block: "nearest", inline: "nearest" });
     runSharedTransition(image, thumbnail, () => dialog.close(), "close");
   };
