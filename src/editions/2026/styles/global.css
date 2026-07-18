@@ -1147,6 +1147,10 @@ a.event-card__soon:hover {
   }
 }
 
+:root[data-venue-transitioning="close"] .event-venue__thumbnail {
+  transition: none;
+}
+
 [data-venue-transition] {
   view-transition-name: venue-photo;
 }
@@ -1205,10 +1209,17 @@ a.event-card__soon:hover {
   animation-duration: 320ms;
 }
 
-:root[data-venue-transitioning="open"]::view-transition-new(venue-close),
+:root[data-venue-transitioning="open"]::view-transition-new(venue-close) {
+  animation: venue-close-fade 320ms linear both;
+}
+
 :root[data-venue-transitioning="close"]::view-transition-old(venue-close) {
-  animation: none;
-  opacity: 1;
+  animation: venue-close-fade 320ms linear reverse both;
+}
+
+@keyframes venue-close-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes venue-page-dim {

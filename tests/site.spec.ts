@@ -342,11 +342,8 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "https://www.linkedin.com/in/balazs-puspok-kiss"
   );
   await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute("target", "_blank");
-  await expect(team.locator('[data-event-people="organizers"] a')).toHaveAttribute(
-    "href",
-    "https://luma.com/calendar/cal-VeKA6RiND89uvHk"
-  );
-  await expect(team.locator('[data-event-people="organizers"] a')).toHaveAttribute("target", "_blank");
+  await expect(team.locator('[data-event-people="organizers"]')).toContainText("Shipaton Budapest 2026");
+  await expect(team.locator('[data-event-people="organizers"] a')).toHaveCount(0);
   await expect(team.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
@@ -859,6 +856,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     const treatment: Record<string, string> = {
       backdropAnimation: getComputedStyle(root, "::view-transition").animationName,
       backdropColor: getComputedStyle(root, "::view-transition").backgroundColor,
+      openCloseNewAnimation: getComputedStyle(root, "::view-transition-new(venue-close)").animationName,
+      openCloseNewDirection: getComputedStyle(root, "::view-transition-new(venue-close)").animationDirection,
       closeGroupZIndex: getComputedStyle(root, "::view-transition-group(venue-close)").zIndex,
       dialogScale: getComputedStyle(document.querySelector("[data-venue-dialog]")!).scale,
       dialogTranslate: getComputedStyle(document.querySelector("[data-venue-dialog]")!).translate,
@@ -875,6 +874,9 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       venuePageTransitionName: getComputedStyle(document.querySelector(".page-transition")!).viewTransitionName,
     };
     root.dataset.venueTransitioning = "close";
+    treatment.closeCloseOldAnimation = getComputedStyle(root, "::view-transition-old(venue-close)").animationName;
+    treatment.closeCloseOldDirection = getComputedStyle(root, "::view-transition-old(venue-close)").animationDirection;
+    treatment.closeThumbnailTransitionDuration = getComputedStyle(document.querySelector("[data-venue-photo]")!).transitionDuration;
     treatment.closePhotoNewAnimation = getComputedStyle(root, "::view-transition-new(venue-photo)").animationName;
     treatment.closePhotoNewObjectFit = getComputedStyle(root, "::view-transition-new(venue-photo)").objectFit;
     treatment.closePhotoNewOpacity = getComputedStyle(root, "::view-transition-new(venue-photo)").opacity;
@@ -888,6 +890,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   expect(isolatedTransition).toEqual({
     backdropAnimation: "none",
     backdropColor: "rgb(10, 7, 17)",
+    closeCloseOldAnimation: "venue-close-fade",
+    closeCloseOldDirection: "reverse",
     closeGroupZIndex: "3",
     closePhotoNewAnimation: "none",
     closePhotoNewObjectFit: "cover",
@@ -896,6 +900,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     closePhotoOldObjectFit: "cover",
     closePhotoOldOpacity: "1",
     closeRootOldOpacity: "0",
+    closeThumbnailTransitionDuration: "0s",
     dialogScale: "none",
     dialogTranslate: "none",
     groupBorderRadius: "10px",
@@ -907,6 +912,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     openPhotoOldAnimation: "none",
     openPhotoOldObjectFit: "cover",
     openPhotoOldOpacity: "0",
+    openCloseNewAnimation: "venue-close-fade",
+    openCloseNewDirection: "normal",
     rootNewOpacity: "0",
     venuePageTransitionName: "none"
   });
@@ -944,8 +951,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     await expect(page.locator("html")).toHaveAttribute("data-venue-transition-old", "thumbnail");
     await expect(page.locator("html")).toHaveAttribute("data-venue-transition-new", "preview");
     expect(await page.evaluate(() => (
-      getComputedStyle(document.documentElement, "::view-transition-new(venue-close)").opacity
-    ))).toBe("1");
+      getComputedStyle(document.documentElement, "::view-transition-new(venue-close)").animationName
+    ))).toBe("venue-close-fade");
   }
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
   if (supportsSharedTransition) {
