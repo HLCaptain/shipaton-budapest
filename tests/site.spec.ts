@@ -336,14 +336,13 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   }
 
   const team = page.locator(".event-people__groups");
-  await expect(team.locator("dt")).toHaveText(["Host", "Organizer", "Speakers"]);
+  await expect(team.locator("dt")).toHaveText(["Host", "Speakers"]);
   await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute(
     "href",
     "https://www.linkedin.com/in/balazs-puspok-kiss"
   );
   await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute("target", "_blank");
-  await expect(team.locator('[data-event-people="organizers"]')).toContainText("Shipaton Budapest 2026");
-  await expect(team.locator('[data-event-people="organizers"] a')).toHaveCount(0);
+  await expect(team.locator('[data-event-people="organizers"]')).toHaveCount(0);
   await expect(team.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
@@ -858,6 +857,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       backdropColor: getComputedStyle(root, "::view-transition").backgroundColor,
       openCloseNewAnimation: getComputedStyle(root, "::view-transition-new(venue-close)").animationName,
       openCloseNewDirection: getComputedStyle(root, "::view-transition-new(venue-close)").animationDirection,
+      openCloseNewTiming: getComputedStyle(root, "::view-transition-new(venue-close)").animationTimingFunction,
       closeGroupZIndex: getComputedStyle(root, "::view-transition-group(venue-close)").zIndex,
       dialogScale: getComputedStyle(document.querySelector("[data-venue-dialog]")!).scale,
       dialogTranslate: getComputedStyle(document.querySelector("[data-venue-dialog]")!).translate,
@@ -876,6 +876,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     root.dataset.venueTransitioning = "close";
     treatment.closeCloseOldAnimation = getComputedStyle(root, "::view-transition-old(venue-close)").animationName;
     treatment.closeCloseOldDirection = getComputedStyle(root, "::view-transition-old(venue-close)").animationDirection;
+    treatment.closeCloseOldTiming = getComputedStyle(root, "::view-transition-old(venue-close)").animationTimingFunction;
     treatment.closeThumbnailTransitionDuration = getComputedStyle(document.querySelector("[data-venue-photo]")!).transitionDuration;
     treatment.closePhotoNewAnimation = getComputedStyle(root, "::view-transition-new(venue-photo)").animationName;
     treatment.closePhotoNewObjectFit = getComputedStyle(root, "::view-transition-new(venue-photo)").objectFit;
@@ -892,6 +893,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     backdropColor: "rgb(10, 7, 17)",
     closeCloseOldAnimation: "venue-close-fade",
     closeCloseOldDirection: "reverse",
+    closeCloseOldTiming: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     closeGroupZIndex: "3",
     closePhotoNewAnimation: "none",
     closePhotoNewObjectFit: "cover",
@@ -914,6 +916,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     openPhotoOldOpacity: "0",
     openCloseNewAnimation: "venue-close-fade",
     openCloseNewDirection: "normal",
+    openCloseNewTiming: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     rootNewOpacity: "0",
     venuePageTransitionName: "none"
   });
@@ -987,11 +990,49 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     expect(finalBox).toEqual(JSON.parse(targetBox!));
   }
 
-  await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
+  const hoverTarget = page.getByRole("list", { name: "Venue photos" }).getByRole("button").first();
+  await hoverTarget.click();
   if (supportsSharedTransition) await expect(page.locator("html")).toHaveAttribute("data-venue-transitioning", "open");
-  await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
+  await hoverTarget.evaluate((button) => {
+    button.scrollIntoView({ behavior: "instant", block: "nearest", inline: "nearest" });
+  });
+  const hoverTargetBox = await hoverTarget.boundingBox();
+  await page.mouse.move(hoverTargetBox!.x + hoverTargetBox!.width / 2, hoverTargetBox!.y + hoverTargetBox!.height / 2);
+  await dialog.getByRole("button", { name: "Close venue photo preview" }).evaluate((button) => {
+    (button as HTMLButtonElement).click();
+  });
+  if (supportsSharedTransition) {
+    await expect(page.locator("html")).toHaveAttribute("data-venue-transitioning", "close");
+    await page.waitForFunction(() => document.getAnimations().some((animation) =>
+      (animation.effect as KeyframeEffect & { pseudoElement?: string })?.pseudoElement === "::view-transition-group(venue-photo)"
+    ));
+    const landing = await page.evaluate(() => {
+      const animation = document.getAnimations().find((candidate) =>
+        (candidate.effect as KeyframeEffect & { pseudoElement?: string })?.pseudoElement === "::view-transition-group(venue-photo)"
+      )!;
+      const matrix = new DOMMatrix((animation.effect as KeyframeEffect).getKeyframes().at(-1)!.transform as string);
+      const target = document.querySelector("[data-venue-photo] img[data-venue-transition]")!;
+      const box = target.getBoundingClientRect();
+      return {
+        x: matrix.e,
+        y: matrix.f,
+        targetX: box.x,
+        targetY: box.y,
+        translate: getComputedStyle(target.closest("[data-venue-photo]")!).translate
+      };
+    });
+    expect(landing.translate).toBe("-8px -8px");
+    expect(Math.abs(landing.x - landing.targetX)).toBeLessThan(0.01);
+    expect(Math.abs(landing.y - landing.targetY)).toBeLessThan(0.01);
+  }
   await expect(dialog).toBeHidden();
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");
+  await expect(hoverTarget).not.toHaveAttribute("data-venue-hover-target");
+  await expect.poll(() => hoverTarget.evaluate((button) => button.matches(":hover"))).toBe(true);
+  if (supportsSharedTransition) {
+    const targetBox = JSON.parse((await page.locator("html").getAttribute("data-venue-transition-target-box"))!);
+    expect(await hoverTarget.locator("img").boundingBox()).toEqual(targetBox);
+  }
 
   await page.getByRole("list", { name: "Venue photos" }).getByRole("button").first().click();
   await expect(page.locator("html")).not.toHaveAttribute("data-venue-transitioning");

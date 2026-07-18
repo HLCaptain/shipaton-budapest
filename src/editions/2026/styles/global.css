@@ -1139,7 +1139,8 @@ a.event-card__soon:hover {
 }
 
 @media (hover: hover) {
-  .event-venue__thumbnail:hover {
+  .event-venue__thumbnail:hover,
+  .event-venue__thumbnail[data-venue-hover-target] {
     border-color: var(--orange);
     background: var(--orange);
     box-shadow: var(--extrusion-shadow);
@@ -1210,11 +1211,11 @@ a.event-card__soon:hover {
 }
 
 :root[data-venue-transitioning="open"]::view-transition-new(venue-close) {
-  animation: venue-close-fade 320ms linear both;
+  animation: venue-close-fade 320ms var(--ease) both;
 }
 
 :root[data-venue-transitioning="close"]::view-transition-old(venue-close) {
-  animation: venue-close-fade 320ms linear reverse both;
+  animation: venue-close-fade 320ms var(--ease) reverse both;
 }
 
 @keyframes venue-close-fade {

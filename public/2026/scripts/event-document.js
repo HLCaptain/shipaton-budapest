@@ -8,6 +8,7 @@ const initVenueGallery = () => {
   const picture = dialog.querySelector("[data-venue-picture]");
   const viewport = dialog.querySelector("[data-venue-viewport]");
   const description = dialog.querySelector("[data-venue-description]");
+  const hover = matchMedia("(hover: hover)");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const root = document.documentElement;
 
@@ -19,6 +20,7 @@ const initVenueGallery = () => {
 
   let currentIndex = 0;
   let opener;
+  let pointer;
   let gesture;
   let previewRule;
   let slide;
@@ -187,11 +189,34 @@ const initVenueGallery = () => {
   const runSharedTransition = (from, to, update, direction) => {
     root.dataset.venueTransitioning = direction;
     from.dataset.venueTransition = "";
+    const fromBox = from.getBoundingClientRect();
+    let toBox;
     const active = document.startViewTransition(() => {
       delete from.dataset.venueTransition;
       update();
       to.dataset.venueTransition = "";
+      toBox = to.getBoundingClientRect();
     });
+    if (direction === "close") active.ready.then(() => {
+      const animation = document.getAnimations().find((candidate) =>
+        candidate.effect?.pseudoElement === "::view-transition-group(venue-photo)"
+      );
+      const keyframes = animation?.effect?.getKeyframes().map(({ computedOffset, ...keyframe }) => keyframe);
+      const first = keyframes?.[0];
+      const last = keyframes?.at(-1);
+      if (!keyframes?.length || !first?.transform || !last?.transform || !toBox) return;
+      const firstMatrix = new DOMMatrix(first.transform);
+      const lastMatrix = new DOMMatrix(last.transform);
+      keyframes[0] = {
+        ...first,
+        transform: `matrix(${firstMatrix.a}, ${firstMatrix.b}, ${firstMatrix.c}, ${firstMatrix.d}, ${fromBox.x}, ${fromBox.y})`
+      };
+      keyframes[keyframes.length - 1] = {
+        ...last,
+        transform: `matrix(${lastMatrix.a}, ${lastMatrix.b}, ${lastMatrix.c}, ${lastMatrix.d}, ${toBox.x}, ${toBox.y})`
+      };
+      animation.effect.setKeyframes(keyframes);
+    }).catch(() => {});
     transition = active;
     const cleanup = () => {
       if (transition !== active) return;
@@ -199,6 +224,7 @@ const initVenueGallery = () => {
       delete to.dataset.venueTransition;
       delete root.dataset.venueTransitioning;
       transition = null;
+      requestAnimationFrame(() => to.closest("[data-venue-hover-target]")?.removeAttribute("data-venue-hover-target"));
     };
     active.finished.then(cleanup, cleanup);
   };
@@ -233,11 +259,18 @@ const initVenueGallery = () => {
     }
 
     photo.scrollIntoView({ behavior: "instant", block: "nearest", inline: "nearest" });
+    const bounds = photo.getBoundingClientRect();
+    photo.toggleAttribute("data-venue-hover-target", Boolean(
+      hover.matches && pointer &&
+      pointer.x >= bounds.left && pointer.x < bounds.right &&
+      pointer.y >= bounds.top && pointer.y < bounds.bottom
+    ));
     runSharedTransition(image, thumbnail, () => dialog.close(), "close");
   };
 
-  photos.forEach((photo, index) => photo.addEventListener("click", () => {
+  photos.forEach((photo, index) => photo.addEventListener("click", (event) => {
     if (transition) return;
+    if (hover.matches && event.detail > 0) pointer = { x: event.clientX, y: event.clientY };
     resetGesture();
     opener = photo;
     renderPhoto(index);
@@ -251,6 +284,9 @@ const initVenueGallery = () => {
   }));
 
   dialog.querySelector("[data-venue-close]").addEventListener("click", closePreview);
+  dialog.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "mouse") pointer = { x: event.clientX, y: event.clientY };
+  });
   dialog.querySelector("[data-venue-previous]").addEventListener("click", () => move(-1));
   dialog.querySelector("[data-venue-next]").addEventListener("click", () => move(1));
   dialog.addEventListener("click", (event) => {
