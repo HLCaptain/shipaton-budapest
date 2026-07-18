@@ -871,10 +871,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
       openPhotoOldAnimation: getComputedStyle(root, "::view-transition-old(venue-photo)").animationName,
       openPhotoOldObjectFit: getComputedStyle(root, "::view-transition-old(venue-photo)").objectFit,
       openPhotoOldOpacity: getComputedStyle(root, "::view-transition-old(venue-photo)").opacity,
-      openPageNewAnimation: getComputedStyle(root, "::view-transition-new(page-content)").animationName,
-      openPageOldAnimation: getComputedStyle(root, "::view-transition-old(page-content)").animationName,
-      pageNewOpacity: getComputedStyle(root, "::view-transition-new(page-content)").opacity,
       rootNewOpacity: getComputedStyle(root, "::view-transition-new(root)").opacity,
+      venuePageTransitionName: getComputedStyle(document.querySelector(".page-transition")!).viewTransitionName,
     };
     root.dataset.venueTransitioning = "close";
     treatment.closePhotoNewAnimation = getComputedStyle(root, "::view-transition-new(venue-photo)").animationName;
@@ -883,8 +881,6 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     treatment.closePhotoOldAnimation = getComputedStyle(root, "::view-transition-old(venue-photo)").animationName;
     treatment.closePhotoOldObjectFit = getComputedStyle(root, "::view-transition-old(venue-photo)").objectFit;
     treatment.closePhotoOldOpacity = getComputedStyle(root, "::view-transition-old(venue-photo)").opacity;
-    treatment.closePageNewAnimation = getComputedStyle(root, "::view-transition-new(page-content)").animationName;
-    treatment.closePageOldOpacity = getComputedStyle(root, "::view-transition-old(page-content)").opacity;
     treatment.closeRootOldOpacity = getComputedStyle(root, "::view-transition-old(root)").opacity;
     delete root.dataset.venueTransitioning;
     return treatment;
@@ -893,8 +889,6 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     backdropAnimation: "none",
     backdropColor: "rgb(10, 7, 17)",
     closeGroupZIndex: "3",
-    closePageNewAnimation: "venue-page-reveal",
-    closePageOldOpacity: "0",
     closePhotoNewAnimation: "none",
     closePhotoNewObjectFit: "cover",
     closePhotoNewOpacity: "0",
@@ -913,10 +907,8 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
     openPhotoOldAnimation: "none",
     openPhotoOldObjectFit: "cover",
     openPhotoOldOpacity: "0",
-    openPageNewAnimation: "none",
-    openPageOldAnimation: "venue-page-dim",
-    pageNewOpacity: "0",
-    rootNewOpacity: "0"
+    rootNewOpacity: "0",
+    venuePageTransitionName: "none"
   });
 
   const supportsSharedTransition = await page.evaluate(() => {

@@ -1151,26 +1151,26 @@ a.event-card__soon:hover {
   view-transition-name: venue-photo;
 }
 
+:root[data-venue-transitioning] .page-transition {
+  view-transition-name: none;
+}
+
 :root[data-venue-transitioning]::view-transition {
   background: rgb(10 7 17);
   animation: none;
 }
 
-:root[data-venue-transitioning="open"]::view-transition-old(root),
-:root[data-venue-transitioning="open"]::view-transition-old(page-content) {
+:root[data-venue-transitioning="open"]::view-transition-old(root) {
   animation: venue-page-dim 320ms var(--ease) both;
 }
 
 :root[data-venue-transitioning="open"]::view-transition-new(root),
-:root[data-venue-transitioning="open"]::view-transition-new(page-content),
-:root[data-venue-transitioning="close"]::view-transition-old(root),
-:root[data-venue-transitioning="close"]::view-transition-old(page-content) {
+:root[data-venue-transitioning="close"]::view-transition-old(root) {
   animation: none;
   opacity: 0;
 }
 
-:root[data-venue-transitioning="close"]::view-transition-new(root),
-:root[data-venue-transitioning="close"]::view-transition-new(page-content) {
+:root[data-venue-transitioning="close"]::view-transition-new(root) {
   animation: venue-page-reveal 320ms var(--ease) both;
 }
 
