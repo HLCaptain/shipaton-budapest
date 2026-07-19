@@ -1102,6 +1102,7 @@ a.event-card__soon:hover {
 
 @media (width > 80rem) {
   .event-venue__rail {
+    margin-inline: 0;
     padding-inline: 0;
     scroll-padding-inline: 0;
     mask-image: linear-gradient(
@@ -1251,9 +1252,9 @@ a.event-card__soon:hover {
   --venue-preview-ratio: 1.5;
   width: min(
     calc(100vw - 1rem),
-    calc((100dvh - 1rem) * var(--venue-preview-ratio))
+    calc(80dvh * var(--venue-preview-ratio))
   );
-  max-width: none;
+  max-width: var(--max-width);
   height: auto;
   max-height: none;
   aspect-ratio: var(--venue-preview-ratio);

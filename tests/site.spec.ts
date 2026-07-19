@@ -414,12 +414,12 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   expect(railLayout).toMatchObject({
     display: "flex",
     documentOverflow: false,
-    edgeToEdge: true,
     overflowX: "auto",
     sameRow: true
   });
   const isWidthConstrained = page.viewportSize()!.width > 1280;
-  expect(railLayout.edgeAligned).toBe(!isWidthConstrained);
+  expect(railLayout.edgeAligned).toBe(true);
+  expect(railLayout.edgeToEdge).toBe(!isWidthConstrained);
   expect(railLayout.itemStartsAtRailEdge).toBe(isWidthConstrained);
   expect(railLayout.sideFade).toBe(isWidthConstrained);
   expect(railLayout.viewportEdgeToEdge).toBe(!isWidthConstrained);
@@ -523,6 +523,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     const style = getComputedStyle(element.querySelector(".venue-preview__shell")!);
     return {
       borderRadius: Number.parseFloat(style.borderTopLeftRadius),
+      withinSizeCap: box.width <= 1281 && box.height <= window.innerHeight * 0.8 + 1,
       fillsViewport: Math.min(
         Math.abs(box.width - (window.innerWidth - 16)),
         Math.abs(box.height - (window.innerHeight - 16))
@@ -543,7 +544,8 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     };
   });
   expect(dialogTreatment.borderRadius).toBeGreaterThan(0);
-  expect(dialogTreatment.fillsViewport).toBe(true);
+  expect(dialogTreatment.withinSizeCap).toBe(true);
+  expect(dialogTreatment.fillsViewport).toBe(testInfo.project.name !== "desktop");
   expect(dialogTreatment.imageInset).toBeLessThan(1);
   expect(dialogTreatment.picturePadding).toEqual(["0px", "0px", "0px", "0px"]);
   expect(dialogTreatment.ratioError).toBeLessThan(0.01);
@@ -733,7 +735,10 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   expect(nextSlide.outgoingEnd).toBeLessThanOrEqual(-nextSlide.width);
   expect(nextSlide.incomingStart).toBeCloseTo(-nextSlide.outgoingEnd, 0);
   expect(nextSlide.incomingEnd).toBeCloseTo(0, 0);
-  expect(nextSlide.endSize.height).not.toBeCloseTo(nextSlide.startSize.height, 0);
+  expect(Math.max(
+    Math.abs(nextSlide.endSize.height - nextSlide.startSize.height),
+    Math.abs(nextSlide.endSize.width - nextSlide.startSize.width)
+  )).toBeGreaterThan(1);
   await page.mouse.click(
     viewportBox!.x + viewportBox!.width / 2,
     viewportBox!.y + viewportBox!.height * 0.25
