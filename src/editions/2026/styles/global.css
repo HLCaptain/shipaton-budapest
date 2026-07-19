@@ -1102,9 +1102,6 @@ a.event-card__soon:hover {
 
 @media (width > 80rem) {
   .event-venue__rail {
-    margin-inline: 0;
-    padding-inline: 0;
-    scroll-padding-inline: 0;
     mask-image: linear-gradient(
       to right,
       transparent,

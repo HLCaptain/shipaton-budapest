@@ -394,12 +394,12 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     const boxes = [...list.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
     const documentBox = list.closest(".event-document")!.getBoundingClientRect();
     const listBox = list.getBoundingClientRect();
-    const sectionBox = list.closest(".event-venue")!.getBoundingClientRect();
+    const headingBox = list.closest(".event-venue")!.querySelector("h2")!.getBoundingClientRect();
     const style = getComputedStyle(list);
     return {
       display: style.display,
       documentOverflow: document.documentElement.scrollWidth > window.innerWidth,
-      edgeAligned: Math.abs(boxes[0].left - sectionBox.left) < 1,
+      edgeAligned: Math.abs(boxes[0].left - headingBox.left) < 1,
       edgeToEdge: Math.abs(listBox.left - documentBox.left) < 1
         && Math.abs(listBox.right - documentBox.right) < 1,
       itemStartsAtRailEdge: Math.abs(boxes[0].left - listBox.left) < 1,
@@ -419,8 +419,8 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
   });
   const isWidthConstrained = page.viewportSize()!.width > 1280;
   expect(railLayout.edgeAligned).toBe(true);
-  expect(railLayout.edgeToEdge).toBe(!isWidthConstrained);
-  expect(railLayout.itemStartsAtRailEdge).toBe(isWidthConstrained);
+  expect(railLayout.edgeToEdge).toBe(true);
+  expect(railLayout.itemStartsAtRailEdge).toBe(false);
   expect(railLayout.sideFade).toBe(isWidthConstrained);
   expect(railLayout.viewportEdgeToEdge).toBe(!isWidthConstrained);
   if (!isWidthConstrained) expect(railLayout.scrollable).toBe(true);
