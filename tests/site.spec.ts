@@ -395,26 +395,35 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     const documentBox = list.closest(".event-document")!.getBoundingClientRect();
     const listBox = list.getBoundingClientRect();
     const sectionBox = list.closest(".event-venue")!.getBoundingClientRect();
+    const style = getComputedStyle(list);
     return {
-      display: getComputedStyle(list).display,
+      display: style.display,
       documentOverflow: document.documentElement.scrollWidth > window.innerWidth,
       edgeAligned: Math.abs(boxes[0].left - sectionBox.left) < 1,
       edgeToEdge: Math.abs(listBox.left - documentBox.left) < 1
         && Math.abs(listBox.right - documentBox.right) < 1,
-      overflowX: getComputedStyle(list).overflowX,
+      itemStartsAtRailEdge: Math.abs(boxes[0].left - listBox.left) < 1,
+      overflowX: style.overflowX,
       sameRow: boxes.every(({ y }) => Math.abs(y - boxes[0].y) < 1),
+      sideFade: style.maskImage !== "none",
+      viewportEdgeToEdge: Math.abs(listBox.left) < 1
+        && Math.abs(listBox.right - window.innerWidth) < 1,
       scrollable: list.scrollWidth > list.clientWidth
     };
   });
-  expect(railLayout).toEqual({
+  expect(railLayout).toMatchObject({
     display: "flex",
     documentOverflow: false,
-    edgeAligned: true,
     edgeToEdge: true,
     overflowX: "auto",
-    sameRow: true,
-    scrollable: true
+    sameRow: true
   });
+  const isWidthConstrained = page.viewportSize()!.width > 1280;
+  expect(railLayout.edgeAligned).toBe(!isWidthConstrained);
+  expect(railLayout.itemStartsAtRailEdge).toBe(isWidthConstrained);
+  expect(railLayout.sideFade).toBe(isWidthConstrained);
+  expect(railLayout.viewportEdgeToEdge).toBe(!isWidthConstrained);
+  if (!isWidthConstrained) expect(railLayout.scrollable).toBe(true);
 
   const opener = thumbnails.first();
   if (testInfo.project.name === "desktop") {
@@ -430,16 +439,17 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
       const style = getComputedStyle(button);
       const buttonBox = button.getBoundingClientRect();
       const extrusion = Math.abs(Number.parseFloat(style.translate));
+      const hasSideFade = railStyle.maskImage !== "none";
       return {
         background: style.backgroundColor,
         border: style.borderColor,
         boxShadow: style.boxShadow,
-        effectInsideRail: buttonBox.left - 4 >= railBox.left
+        effectInsideRail: (hasSideFade || (buttonBox.left - 4 >= railBox.left
+          && buttonBox.right + extrusion <= railBox.right))
           && buttonBox.top - 4 >= railBox.top
-          && buttonBox.right + extrusion <= railBox.right
           && buttonBox.bottom + extrusion <= railBox.bottom,
         hasEdgeClearance: Number.parseFloat(railStyle.paddingTop) >= extrusion + 6
-          && Number.parseFloat(railStyle.paddingLeft) >= extrusion + 6,
+          && (hasSideFade || Number.parseFloat(railStyle.paddingLeft) >= extrusion + 6),
         translate: style.translate
       };
     });
@@ -1225,6 +1235,10 @@ test("keeps the event detail body aligned with a responsive table of contents", 
   const body = page.locator(".event-document__body");
   const toc = page.getByRole("navigation", { name: "On this page" });
   const intro = body.locator("> p").first();
+  const documentBox = await page.locator(".event-document").boundingBox();
+  const headerBox = await page.locator(".site-header").boundingBox();
+  const brandBox = await page.locator(".site-header .brand").boundingBox();
+  const footerBox = await page.locator(".site-footer__grid").boundingBox();
   const titleBox = await title.boundingBox();
   const scheduleBox = await scheduleHeading.boundingBox();
   const headingBox = await aboutHeading.boundingBox();
@@ -1237,11 +1251,19 @@ test("keeps the event detail body aligned with a responsive table of contents", 
     return { depth: item.dataset.depth, x, y };
   }));
 
+  expect(documentBox).not.toBeNull();
+  expect(headerBox).not.toBeNull();
+  expect(brandBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
   expect(titleBox).not.toBeNull();
   expect(scheduleBox).not.toBeNull();
   expect(headingBox).not.toBeNull();
   expect(bodyBox).not.toBeNull();
   expect(tocBox).not.toBeNull();
+  expect(Math.abs(documentBox!.x - headerBox!.x)).toBeLessThan(1);
+  expect(Math.abs(documentBox!.width - headerBox!.width)).toBeLessThan(1);
+  expect(Math.abs(titleBox!.x - brandBox!.x)).toBeLessThan(1);
+  expect(Math.abs(titleBox!.x - footerBox!.x)).toBeLessThan(1);
   expect(Math.abs(titleBox!.x - scheduleBox!.x)).toBeLessThan(1);
   expect(Math.abs(titleBox!.x - headingBox!.x)).toBeLessThan(1);
   expect(Math.abs(headingBox!.x - bodyBox!.x)).toBeLessThan(1);

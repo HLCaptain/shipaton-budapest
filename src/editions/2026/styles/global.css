@@ -1013,7 +1013,7 @@ a.event-card__soon:hover {
 }
 
 .event-document {
-  width: min(100%, 72rem);
+  width: min(100%, var(--max-width));
   min-height: calc(100vh - 5rem);
   margin-inline: auto;
   padding: clamp(1.5rem, 5vw, 3.5rem) var(--page-gutter) clamp(3rem, 7vw, 5rem);
@@ -1098,6 +1098,20 @@ a.event-card__soon:hover {
   scroll-padding-inline: var(--page-gutter);
   scroll-snap-type: x mandatory;
   list-style: none;
+}
+
+@media (width > 80rem) {
+  .event-venue__rail {
+    padding-inline: 0;
+    scroll-padding-inline: 0;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--page-gutter),
+      #000 calc(100% - var(--page-gutter)),
+      transparent
+    );
+  }
 }
 
 .event-venue__rail > li {
