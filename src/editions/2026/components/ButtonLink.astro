@@ -1,0 +1,21 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+type Props = Omit<HTMLAttributes<"a">, "class"> & {
+  href: string;
+  variant?: "primary" | "quiet";
+  class?: string;
+};
+
+const { variant = "quiet", class: className, ...attributes } = Astro.props;
+---
+
+{variant === "primary" ? (
+  <a {...attributes} class:list={["button-hit-area", className]}>
+    <span class="button button--primary"><slot /></span>
+  </a>
+) : (
+  <a {...attributes} class:list={["button", "button--quiet", className]}>
+    <slot />
+  </a>
+)}

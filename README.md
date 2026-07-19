@@ -1,6 +1,6 @@
 # Shipaton Budapest
 
-A small static site for the Budapest Shipaton 2026 event series. Astro renders the page; the browser only runs the date-aware event rail.
+A static archive for Budapest Shipaton editions. The root redirects to the current edition at `/2026/`; Astro renders each edition while the browser only runs its small interaction scripts.
 
 Production: [shipaton-budapest.pages.dev](https://shipaton-budapest.pages.dev)
 
@@ -24,7 +24,11 @@ The Playwright suite runs at mobile, tablet, and desktop sizes. It fixes the bro
 
 ## Update the schedule
 
-Edit `src/data/events.ts`. Events must remain in chronological order. The page selects the first event on or after the current Budapest date; after the series ends, it selects the last event.
+Add or edit a flat, lowercase kebab-case entry in `src/content/events/2026/`; the edition sorts entries by date and selects the first event on or after the current Budapest date. Copy `_template.mdx` there for the complete field list.
+
+Every entry appears on `/2026/events/` and publishes at `/2026/events/<filename>/`. Frontmatter drives the shared facts, tags, schedule, optional RSVP, location, hosts, organizers, speakers, presentation, and attachments; the MDX body holds the welcoming description and goals. People can include an optional role and external `url`. Put uploaded files under `public/2026/documents/`.
+
+The 2026 design is frozen under `src/editions/2026/`, with authored assets and scripts under `public/2026/`. A future edition should get its own page, content, edition, and public directories so rebuilding it cannot change earlier designs. Deployment-wide redirects, headers, and robots rules remain at the root of `public/`.
 
 The checked-in entries are a draft because no public Budapest listing currently exists on the official Shipaton calendar.
 

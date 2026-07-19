@@ -1,0 +1,262 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getCollection, render } from "astro:content";
+import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
+import PersonList from "../../../editions/2026/components/PersonList.astro";
+import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
+import BaseLayout from "../../../editions/2026/layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  return (await getCollection("events2026")).map((event) => ({
+    params: { id: event.id },
+    props: { event }
+  }));
+}
+
+type Props = {
+  event: CollectionEntry<"events2026">;
+};
+
+const { event } = Astro.props;
+const { Content, headings } = await render(event);
+const hosts = event.data.hosts ?? [];
+const organizers = event.data.organizers ?? [];
+const speakers = event.data.speakers ?? [];
+const hasPeople = hosts.length + organizers.length + speakers.length > 0;
+const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
+const thumbnail = event.data.thumbnail;
+const venueImages = event.data.venueImages ?? [];
+const firstVenueImage = venueImages[0]!;
+const date = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Budapest"
+}).format(new Date(`${event.data.date}T12:00:00Z`));
+---
+
+<BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
+  <main class="event-document" id="main-content">
+    <ButtonLink class="button--compact event-document__back" href="/2026/" data-history-back>
+      <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M13 8H3m0 0 4-4M3 8l4 4" />
+      </svg>
+      Back
+    </ButtonLink>
+
+    <header class="event-document__header">
+      <div class:list={["event-document__hero", { "event-document__hero--with-thumbnail": Boolean(thumbnail) }]}>
+        <div class="event-document__hero-copy">
+          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
+          <h1>{event.data.title}</h1>
+          <p>{event.data.description}</p>
+        </div>
+        {thumbnail && (
+          <img
+            class="event-document__thumbnail"
+            src={thumbnail.src}
+            alt={thumbnail.alt}
+            width={thumbnail.width}
+            height={thumbnail.height}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        )}
+      </div>
+      <dl class="event-document__facts">
+        <div>
+          <dt>Date</dt>
+          <dd><time datetime={event.data.date}>{date}</time></dd>
+        </div>
+        <div>
+          <dt>Time</dt>
+          <dd>{event.data.time}</dd>
+        </div>
+        <div>
+          <dt>Location</dt>
+          <dd>
+            {event.data.locationUrl
+              ? <a href={event.data.locationUrl} rel="noreferrer">{event.data.venue} <span aria-hidden="true">↗</span></a>
+              : event.data.venue}
+          </dd>
+        </div>
+        <div>
+          <dt>Themes</dt>
+          <dd>{event.data.themes.join(" · ")}</dd>
+        </div>
+        <div>
+          <dt>RSVP</dt>
+          <dd>
+            {event.data.rsvp
+              ? <a href={event.data.rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
+              : <span>Local registration opens soon · <a href="https://www.shipaton.com/events" rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
+          </dd>
+        </div>
+      </dl>
+      <ul class="tag-list event-document__tags" aria-label="Event tags">
+        {event.data.tags.map((tag) => <li>{tag}</li>)}
+      </ul>
+      {(event.data.rsvp || event.data.presentation || event.data.attachment) && (
+        <nav class="event-document__resources" aria-label="Event resources">
+          {event.data.rsvp && (
+            <ButtonLink href={event.data.rsvp} rel="noreferrer" variant="primary">
+              RSVP <span aria-hidden="true">↗</span>
+            </ButtonLink>
+          )}
+          {event.data.presentation && <ButtonLink href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></ButtonLink>}
+          {event.data.attachment && <ButtonLink href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></ButtonLink>}
+        </nav>
+      )}
+    </header>
+
+    {venueImages.length > 0 && (
+      <>
+        <section class="event-venue" aria-labelledby="venue-title" data-venue-gallery>
+          <SectionHeading eyebrow="See the space" id="venue-title" title="Venue preview" />
+          <ul class="event-venue__rail" aria-label="Venue photos">
+            {venueImages.map((image) => (
+              <li>
+                <button
+                  class="event-venue__thumbnail"
+                  type="button"
+                  data-venue-photo
+                  data-src={image.src}
+                  data-alt={image.alt}
+                  data-description={image.description}
+                  data-width={image.width}
+                  data-height={image.height}
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    width={image.width}
+                    height={image.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="visually-hidden">Open full-size preview</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <dialog
+          class="venue-preview"
+          aria-labelledby="venue-preview-title"
+          aria-describedby="venue-preview-caption"
+          data-venue-dialog
+        >
+          <button class="venue-preview__close" type="button" aria-label="Close venue photo preview" data-venue-close autofocus>
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M3 3l10 10M13 3 3 13" />
+            </svg>
+          </button>
+
+          <div class="venue-preview__shell">
+            <h2 class="visually-hidden" id="venue-preview-title">Venue photo preview</h2>
+
+            <figure class="venue-preview__viewer">
+              <div class="venue-preview__viewport" data-venue-viewport>
+                <button
+                  class="venue-preview__picture"
+                  type="button"
+                  aria-label="Zoom in on venue photo"
+                  aria-pressed="false"
+                  data-venue-picture
+                >
+                  <img
+                    class="venue-preview__image"
+                    src={firstVenueImage.src}
+                    alt={firstVenueImage.alt}
+                    width={firstVenueImage.width}
+                    height={firstVenueImage.height}
+                    decoding="async"
+                    draggable="false"
+                    data-venue-preview-image
+                  />
+                </button>
+              </div>
+              <figcaption class="venue-preview__caption" id="venue-preview-caption" aria-live="polite" data-venue-caption>
+                <p data-venue-description>{firstVenueImage.description}</p>
+              </figcaption>
+            </figure>
+
+            <div class="venue-preview__controls" role="group" aria-label="Venue photo controls">
+              <button class="button button--quiet button--compact" type="button" aria-label="Previous venue photo" data-venue-previous>
+                <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="M13 8H3m0 0 4-4M3 8l4 4" />
+                </svg>
+              </button>
+              <button class="button button--quiet button--compact" type="button" aria-label="Next venue photo" data-venue-next>
+                <svg class="button__icon venue-preview__next-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="M3 8h10m0 0-4-4m4 4-4 4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      </>
+    )}
+
+    <section class="event-schedule" aria-labelledby="schedule-title">
+      <SectionHeading eyebrow="Run of show" id="schedule-title" title="Schedule" />
+      <ol role="list">
+        {event.data.schedule.map((item) => (
+          <li>
+            <span class="event-schedule__time">{item.time}</span>
+            <div>
+              <h3>{item.emoji && <span aria-hidden="true">{item.emoji}</span>} {item.title}</h3>
+              <p>{item.description}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {hasPeople && (
+      <section class="event-people" aria-labelledby="people-title">
+        <SectionHeading eyebrow="Meet the people" id="people-title" title="Event team" />
+        <dl class="event-people__groups">
+          {hosts.length > 0 && <PersonList kind="hosts" people={hosts} showRoles />}
+          {organizers.length > 0 && <PersonList kind="organizers" people={organizers} showRoles />}
+          {speakers.length > 0 && <PersonList kind="speakers" people={speakers} showRoles />}
+        </dl>
+      </section>
+    )}
+
+    <section class="event-about" aria-labelledby="about-title">
+      <div class="event-about__heading">
+        <SectionHeading eyebrow="Know before you go" id="about-title" title="About this event" />
+      </div>
+      <div class="event-about__layout">
+        {contentHeadings.length > 0 && (
+          <nav class="event-document__toc" aria-label="On this page">
+            <p>On this page</p>
+            <ol>
+              {contentHeadings.map((heading) => (
+                <li data-depth={heading.depth}>
+                  <a href={`#${heading.slug}`}>{heading.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+        <article class="event-document__body">
+          <Content />
+        </article>
+      </div>
+      <p class="visually-hidden" role="status" aria-live="polite" data-heading-copy-status></p>
+    </section>
+
+    <ButtonLink class="button--compact event-document__end-link" href="/2026/events/">
+      <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M13 8H3m0 0 4-4M3 8l4 4" />
+      </svg>
+      Back to 2026 events
+    </ButtonLink>
+  </main>
+
+  <script is:inline src="/2026/scripts/event-document.js" defer></script>
+</BaseLayout>
