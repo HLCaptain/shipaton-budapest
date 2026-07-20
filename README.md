@@ -51,6 +51,16 @@ The API token needs Cloudflare Pages edit permission for the account. Repository
 
 Cloudflare Pages hosts both previews and production, so the repository can remain private without adding a second GitHub Pages deployment path.
 
+## License
+
+The source code is available under the [MIT License](LICENSE). Content and image assets are not included unless expressly stated otherwise.
+
 ## Brand assets
 
-The logo and rocket illustration come from the official [Shipaton 2026 media kit](https://www.shipaton.com/media-kit), where they are offered as free-to-use Shipaton assets.
+These official Shipaton assets are excluded from the MIT License:
+
+- `public/2026/brand/rocket-launch-wide.svg`
+- `public/2026/brand/shipaton-wordmark.svg`
+- `public/2026/brand/shippy-pixel-head.png`
+
+The wordmark and rocket illustration come from the official [Shipaton 2026 media kit](https://www.shipaton.com/media-kit), where they are offered as free-to-use Shipaton assets for event and promotional materials. The pixel head is official Shipaton artwork. All three remain subject to the asset owner's permissions; this repository grants no rights to Shipaton names, marks, or artwork.
