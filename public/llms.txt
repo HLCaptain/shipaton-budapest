@@ -1,0 +1,9 @@
+# Shipaton Budapest
+
+> A static archive for Budapest Shipaton editions, including local event details, schedules, speakers, and attendance information.
+
+## Pages
+
+- [Shipaton Budapest 2026](https://shipaton-budapest.pages.dev/2026/): Current Budapest edition overview.
+- [2026 events](https://shipaton-budapest.pages.dev/2026/events/): Event archive for the 2026 edition.
+- [Project Kickoff](https://shipaton-budapest.pages.dev/2026/events/project-kickoff/): Details, agenda, speakers, and attendance information for the kickoff event.

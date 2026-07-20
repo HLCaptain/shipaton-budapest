@@ -13,6 +13,24 @@ test("redirects the root to the current edition", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
 });
 
+test("fades in external SVG artwork after it loads", async ({ page }) => {
+  await page.goto("/2026/");
+
+  const fades = await page.locator('img[src$=".svg"]').evaluateAll((images) => images.map((image) => {
+    const animation = image.getAnimations()[0];
+    const frames = (animation.effect as KeyframeEffect).getKeyframes();
+    return {
+      duration: animation.effect?.getTiming().duration,
+      opacity: frames.map((frame) => Number(frame.opacity))
+    };
+  }));
+
+  expect(fades).toEqual([
+    { duration: 400, opacity: [0, 1] },
+    { duration: 400, opacity: [0, 1] }
+  ]);
+});
+
 test("opens on the confirmed event without redundant navigation", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -748,7 +766,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
         height: Number.parseFloat(String(sizeFrames[0].height)),
         width: Number.parseFloat(String(sizeFrames[0].width))
       },
-      width: viewport.clientWidth
+      width: viewport.getBoundingClientRect().width
     };
   });
 
