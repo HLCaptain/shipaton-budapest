@@ -193,7 +193,7 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText(
-    "Genesys Hungary office · Budapest"
+    "Genesys Hungary office · Teréz körút 55-57, Building B, Eiffel Irodaház · Entrance next to Cafe Frei"
   );
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
@@ -278,7 +278,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Project Kickoff");
   const facts = page.locator(".event-document__facts");
-  await expect(facts).toContainText("Genesys Hungary office · Budapest");
+  await expect(facts).toContainText(
+    "Genesys Hungary office · Teréz körút 55-57, Building B, Eiffel Irodaház · Entrance next to Cafe Frei"
+  );
   await expect(facts).toContainText("17:00–21:00");
   await expect(facts).toContainText("Mobile development · Idea development · Mentoring");
   await expect(facts.getByRole("link", { name: /Genesys Hungary office/ })).toHaveAttribute(
