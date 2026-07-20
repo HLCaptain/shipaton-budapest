@@ -10,6 +10,10 @@ test("redirects the root to the current edition", async ({ page }) => {
   await expect(page).toHaveURL(/\/2026\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/");
+  const socialImage = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(new URL(socialImage!).pathname).toBe("/2026/brand/shipaton-budapest-social-card.png");
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute("content", socialImage!);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
 });
 
