@@ -2,6 +2,20 @@
   if (window.__shipatonPageTransitionsBound) return;
   window.__shipatonPageTransitionsBound = true;
 
+  document.addEventListener("load", ({ target }) => {
+    if (
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+      || !(target instanceof HTMLImageElement)
+      || !new URL(target.currentSrc || target.src).pathname.endsWith(".svg")
+    ) return;
+
+    target.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 400,
+      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      fill: "both"
+    });
+  }, true);
+
   const pathDepth = ({ pathname }) => pathname.split("/").filter(Boolean).length;
   const rememberBackTarget = (from, to, index = null) => {
     if (from.origin === to.origin && from.pathname !== to.pathname) {

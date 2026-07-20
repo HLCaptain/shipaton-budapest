@@ -30,6 +30,7 @@ const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
     <ClientRouter fallback="animate" />
   </head>
   <body>
+    <script is:inline src="/2026/scripts/page-transitions.js"></script>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
       <a class="brand" href="/2026/" aria-label="Shipaton Budapest home">
@@ -101,6 +102,5 @@ const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
         <p>Community-led in Budapest · August—September 2026</p>
       </div>
     </footer>
-    <script is:inline src="/2026/scripts/page-transitions.js" defer></script>
   </body>
 </html>

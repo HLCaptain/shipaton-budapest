@@ -13,6 +13,24 @@ test("redirects the root to the current edition", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
 });
 
+test("fades in external SVG artwork after it loads", async ({ page }) => {
+  await page.goto("/2026/");
+
+  const fades = await page.locator('img[src$=".svg"]').evaluateAll((images) => images.map((image) => {
+    const animation = image.getAnimations()[0];
+    const frames = (animation.effect as KeyframeEffect).getKeyframes();
+    return {
+      duration: animation.effect?.getTiming().duration,
+      opacity: frames.map((frame) => Number(frame.opacity))
+    };
+  }));
+
+  expect(fades).toEqual([
+    { duration: 400, opacity: [0, 1] },
+    { duration: 400, opacity: [0, 1] }
+  ]);
+});
+
 test("opens on the confirmed event without redundant navigation", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -175,7 +193,7 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText(
-    "Genesys Hungary office · Budapest"
+    "Genesys Hungary office · Teréz körút 55-57, Building B, Eiffel Irodaház · Entrance next to Cafe Frei"
   );
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
@@ -260,7 +278,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Project Kickoff");
   const facts = page.locator(".event-document__facts");
-  await expect(facts).toContainText("Genesys Hungary office · Budapest");
+  await expect(facts).toContainText(
+    "Genesys Hungary office · Teréz körút 55-57, Building B, Eiffel Irodaház · Entrance next to Cafe Frei"
+  );
   await expect(facts).toContainText("17:00–21:00");
   await expect(facts).toContainText("Mobile development · Idea development · Mentoring");
   await expect(facts.getByRole("link", { name: /Genesys Hungary office/ })).toHaveAttribute(
@@ -748,7 +768,7 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
         height: Number.parseFloat(String(sizeFrames[0].height)),
         width: Number.parseFloat(String(sizeFrames[0].width))
       },
-      width: viewport.clientWidth
+      width: viewport.getBoundingClientRect().width
     };
   });
 
