@@ -35,7 +35,6 @@ export default defineConfig({
     ? undefined
     : {
         command: `npx wrangler pages dev dist --ip 127.0.0.1 --port ${localPort}`,
-        url: baseURL,
-        reuseExistingServer: false
+        url: baseURL
       }
 });

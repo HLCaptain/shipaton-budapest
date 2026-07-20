@@ -2,7 +2,7 @@
   if (window.__shipatonPageTransitionsBound) return;
   window.__shipatonPageTransitionsBound = true;
 
-  const pathDepth = (url) => new URL(url, window.location.href).pathname.split("/").filter(Boolean).length;
+  const pathDepth = ({ pathname }) => pathname.split("/").filter(Boolean).length;
   const rememberBackTarget = (from, to, index = null) => {
     if (from.origin === to.origin && from.pathname !== to.pathname) {
       window.__shipatonBackTarget = { href: from.href, index: Number.isInteger(index) ? index : null };
@@ -37,11 +37,9 @@
     rememberBackTarget(from, to, history.state?.index);
     const fromDepth = pathDepth(from);
     const toDepth = pathDepth(to);
-    const direction = to.pathname === from.pathname
-      ? "same"
-      : toDepth < fromDepth || (toDepth === fromDepth && event.direction === "back")
-        ? "up"
-        : "down";
+    let direction = "down";
+    if (to.pathname === from.pathname) direction = "same";
+    else if (toDepth < fromDepth || (toDepth === fromDepth && event.direction === "back")) direction = "up";
     const targetScrollY = event.navigationType === "traverse" && Number.isFinite(history.state?.scrollY)
       ? history.state.scrollY
       : 0;

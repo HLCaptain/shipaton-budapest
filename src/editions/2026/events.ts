@@ -1,5 +1,9 @@
-import type { CollectionEntry } from "astro:content";
+const eventDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Budapest"
+});
 
-export const year = "2026";
-export const eventSlug = ({ id }: CollectionEntry<"events2026">) => id;
-export const eventPath = (event: CollectionEntry<"events2026">) => `/${year}/events/${eventSlug(event)}/`;
+export const formatEventDate = (date: string) => eventDateFormatter.format(new Date(`${date}T12:00:00Z`));
+export const eventPath = (id: string) => `/2026/events/${id}/`;
