@@ -193,7 +193,7 @@ test("links the hero art to the next Budapest event", async ({ page }) => {
   await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText(
-    "Genesys Hungary office · Teréz körút 55-57, Building B, Eiffel Irodaház · Entrance next to Cafe Frei"
+    "Genesys Hungary office · Eiffel Irodaház"
   );
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
