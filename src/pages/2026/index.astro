@@ -52,7 +52,7 @@ const description =
           />
           <figcaption>
             <span data-featured-title>{featuredEvent.data.title}</span>
-            <strong data-featured-location>{featuredEvent.data.venue}</strong>
+            <strong data-featured-location>{featuredEvent.data.heroVenue ?? featuredEvent.data.venue}</strong>
           </figcaption>
         </figure>
       </a>
@@ -91,6 +91,7 @@ const description =
               data-date={event.date}
               data-title={event.title}
               data-venue={event.venue}
+              data-hero-venue={event.heroVenue ?? event.venue}
             >
               <div class="event-card__topline">
                 <span class="event-card__sequence">Orbit {event.sequence}</span>

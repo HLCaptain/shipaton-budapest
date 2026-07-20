@@ -25,6 +25,7 @@ const events2026 = defineCollection({
     description: z.string(),
     time: z.string(),
     venue: z.string(),
+    heroVenue: z.string().optional(),
     thumbnail: image.refine(
       ({ width, height }) => width === height,
       "Event thumbnails must use a 1:1 aspect ratio"

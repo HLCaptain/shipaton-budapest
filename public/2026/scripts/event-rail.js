@@ -109,7 +109,7 @@ const initEventRail = () => {
     const title = featuredLink.querySelector("[data-featured-title]");
     const location = featuredLink.querySelector("[data-featured-location]");
     if (title) title.textContent = featuredCard.dataset.title ?? "Upcoming event";
-    if (location) location.textContent = featuredCard.dataset.venue ?? "Budapest";
+    if (location) location.textContent = featuredCard.dataset.heroVenue ?? "Budapest";
   }
 
   initialFrame = requestAnimationFrame(() => centerCard(cards[activeIndex], false));
