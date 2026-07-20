@@ -5,7 +5,6 @@ const site = process.env.SITE_URL ?? "https://shipaton-budapest.pages.dev";
 
 export default defineConfig({
   site,
-  output: "static",
   trailingSlash: "always",
   redirects: {
     "/": "/2026/",

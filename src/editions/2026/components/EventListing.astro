@@ -1,6 +1,6 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import { eventPath } from "../events";
+import { eventPath, formatEventDate } from "../events";
 import PersonList from "./PersonList.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
@@ -9,12 +9,6 @@ type Props = {
 };
 
 const { events } = Astro.props;
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "Europe/Budapest"
-});
 ---
 
 <BaseLayout
@@ -36,9 +30,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
           <article class="event-grid-card">
             <div class="event-grid-card__topline">
               <span>Orbit {entry.data.sequence}</span>
-              <time datetime={entry.data.date}>{dateFormatter.format(new Date(`${entry.data.date}T12:00:00Z`))}</time>
+              <time datetime={entry.data.date}>{formatEventDate(entry.data.date)}</time>
             </div>
-            <h2><a class="event-grid-card__link" href={eventPath(entry)}>{entry.data.title}</a></h2>
+            <h2><a class="event-grid-card__link" href={eventPath(entry.id)}>{entry.data.title}</a></h2>
             <p class="event-grid-card__format">{entry.data.format}</p>
             <p>{entry.data.description}</p>
             <dl>

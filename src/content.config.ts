@@ -8,6 +8,13 @@ const person = z.object({
   url: z.url().optional()
 });
 
+const image = z.object({
+  src: z.string(),
+  alt: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+});
+
 const events2026 = defineCollection({
   loader: glob({ base: "./src/content/events/2026", pattern: "[^_]*.{md,mdx}" }),
   schema: z.object({
@@ -18,18 +25,12 @@ const events2026 = defineCollection({
     description: z.string(),
     time: z.string(),
     venue: z.string(),
-    thumbnail: z.object({
-      src: z.string(),
-      alt: z.string().min(1),
-      width: z.number().int().positive(),
-      height: z.number().int().positive()
-    }).refine(({ width, height }) => width === height, "Event thumbnails must use a 1:1 aspect ratio").optional(),
-    venueImages: z.array(z.object({
-      src: z.string(),
-      alt: z.string().min(1),
-      description: z.string().min(1),
-      width: z.number().int().positive(),
-      height: z.number().int().positive()
+    thumbnail: image.refine(
+      ({ width, height }) => width === height,
+      "Event thumbnails must use a 1:1 aspect ratio"
+    ).optional(),
+    venueImages: z.array(image.extend({
+      description: z.string().min(1)
     })).min(1).optional(),
     themes: z.array(z.string()).min(1),
     tags: z.array(z.string()).min(1),

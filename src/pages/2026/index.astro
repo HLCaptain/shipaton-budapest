@@ -2,24 +2,18 @@
 import { getCollection } from "astro:content";
 import ButtonLink from "../../editions/2026/components/ButtonLink.astro";
 import PersonList from "../../editions/2026/components/PersonList.astro";
-import { eventPath } from "../../editions/2026/events";
+import { eventPath, formatEventDate } from "../../editions/2026/events";
 import BaseLayout from "../../editions/2026/layouts/BaseLayout.astro";
 
 const events = (await getCollection("events2026")).sort((a, b) => a.data.date.localeCompare(b.data.date));
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
 const featuredEvent = events.find(({ data }) => data.date >= today) ?? events.at(-1)!;
-const featuredEventUrl = eventPath(featuredEvent);
+const featuredEventUrl = eventPath(featuredEvent.id);
 const competitionDeadline = "2026-10-01T06:45:00Z";
 
 const pageTitle = "Shipaton Budapest 2026";
 const description =
   "A community-led Budapest meetup where developers share ideas, get practical guidance, and move their apps forward during Shipaton 2026.";
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "Europe/Budapest"
-});
 ---
 
 <BaseLayout title={pageTitle} description={description}>
@@ -93,7 +87,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
               id={id}
               data-event-rail-card
               data-event-card
-              data-event-url={`/2026/events/${id}/`}
+              data-event-url={eventPath(id)}
               data-date={event.date}
               data-title={event.title}
               data-venue={event.venue}
@@ -102,7 +96,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
                 <span class="event-card__state" data-event-state>Scheduled</span>
               </div>
-              <time datetime={event.date}>{dateFormatter.format(new Date(`${event.date}T12:00:00Z`))}</time>
+              <time datetime={event.date}>{formatEventDate(event.date)}</time>
               <h3>{event.title}</h3>
               <p class="event-card__format">{event.format}</p>
               <p class="event-card__description">{event.description}</p>
@@ -120,11 +114,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
                   <PersonList class="event-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
                 )}
               </dl>
-              <a class="event-card__soon" href={`/2026/events/${id}/`}>View event details →</a>
+              <a class="event-card__soon" href={eventPath(id)}>View event details →</a>
             </li>
           ))}
           <li
-            class="event-card event-card--teaser"
+            class="event-card"
             data-event-rail-card
             data-event-teaser
             data-visible-before={competitionDeadline}
@@ -171,7 +165,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
     </section>
 
     <section class="principles" aria-labelledby="principles-title">
-      <div class="principles__intro">
+      <div>
         <p class="eyebrow"><span aria-hidden="true"></span> Flexible schedule, practical focus</p>
         <h2 id="principles-title">Learn together.<br />Build your way.</h2>
       </div>

@@ -4,6 +4,7 @@ import { getCollection, render } from "astro:content";
 import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
 import PersonList from "../../../editions/2026/components/PersonList.astro";
 import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
+import { formatEventDate } from "../../../editions/2026/events";
 import BaseLayout from "../../../editions/2026/layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
@@ -18,24 +19,20 @@ type Props = {
 };
 
 const { event } = Astro.props;
+const { data } = event;
 const { Content, headings } = await render(event);
-const hosts = event.data.hosts ?? [];
-const organizers = event.data.organizers ?? [];
-const speakers = event.data.speakers ?? [];
+const hosts = data.hosts ?? [];
+const organizers = data.organizers ?? [];
+const speakers = data.speakers ?? [];
 const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
-const thumbnail = event.data.thumbnail;
-const venueImages = event.data.venueImages ?? [];
+const thumbnail = data.thumbnail;
+const venueImages = data.venueImages ?? [];
 const firstVenueImage = venueImages[0]!;
-const date = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "Europe/Budapest"
-}).format(new Date(`${event.data.date}T12:00:00Z`));
+const date = formatEventDate(data.date);
 ---
 
-<BaseLayout title={`${event.data.title} · Shipaton Budapest`} description={event.data.description}>
+<BaseLayout title={`${data.title} · Shipaton Budapest`} description={data.description}>
   <main class="event-document" id="main-content">
     <ButtonLink class="button--compact event-document__back" href="/2026/" data-history-back>
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -45,11 +42,11 @@ const date = new Intl.DateTimeFormat("en-GB", {
     </ButtonLink>
 
     <header class="event-document__header">
-      <div class:list={["event-document__hero", { "event-document__hero--with-thumbnail": Boolean(thumbnail) }]}>
+      <div class:list={{ "event-document__hero--with-thumbnail": Boolean(thumbnail) }}>
         <div class="event-document__hero-copy">
-          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {event.data.sequence} · {date}</p>
-          <h1>{event.data.title}</h1>
-          <p>{event.data.description}</p>
+          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {data.sequence} · {date}</p>
+          <h1>{data.title}</h1>
+          <p>{data.description}</p>
         </div>
         {thumbnail && (
           <img
@@ -67,45 +64,45 @@ const date = new Intl.DateTimeFormat("en-GB", {
       <dl class="event-document__facts">
         <div>
           <dt>Date</dt>
-          <dd><time datetime={event.data.date}>{date}</time></dd>
+          <dd><time datetime={data.date}>{date}</time></dd>
         </div>
         <div>
           <dt>Time</dt>
-          <dd>{event.data.time}</dd>
+          <dd>{data.time}</dd>
         </div>
         <div>
           <dt>Location</dt>
           <dd>
-            {event.data.locationUrl
-              ? <a href={event.data.locationUrl} rel="noreferrer">{event.data.venue} <span aria-hidden="true">↗</span></a>
-              : event.data.venue}
+            {data.locationUrl
+              ? <a href={data.locationUrl} rel="noreferrer">{data.venue} <span aria-hidden="true">↗</span></a>
+              : data.venue}
           </dd>
         </div>
         <div>
           <dt>Themes</dt>
-          <dd>{event.data.themes.join(" · ")}</dd>
+          <dd>{data.themes.join(" · ")}</dd>
         </div>
         <div>
           <dt>RSVP</dt>
           <dd>
-            {event.data.rsvp
-              ? <a href={event.data.rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
+            {data.rsvp
+              ? <a href={data.rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
               : <span>Local registration opens soon · <a href="https://www.shipaton.com/events" rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
           </dd>
         </div>
       </dl>
       <ul class="tag-list event-document__tags" aria-label="Event tags">
-        {event.data.tags.map((tag) => <li>{tag}</li>)}
+        {data.tags.map((tag) => <li>{tag}</li>)}
       </ul>
-      {(event.data.rsvp || event.data.presentation || event.data.attachment) && (
+      {(data.rsvp || data.presentation || data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
-          {event.data.rsvp && (
-            <ButtonLink href={event.data.rsvp} rel="noreferrer" variant="primary">
+          {data.rsvp && (
+            <ButtonLink href={data.rsvp} rel="noreferrer" variant="primary">
               RSVP <span aria-hidden="true">↗</span>
             </ButtonLink>
           )}
-          {event.data.presentation && <ButtonLink href={event.data.presentation}>Open presentation <span aria-hidden="true">↗</span></ButtonLink>}
-          {event.data.attachment && <ButtonLink href={event.data.attachment}>Open attachment <span aria-hidden="true">↗</span></ButtonLink>}
+          {data.presentation && <ButtonLink href={data.presentation}>Open presentation <span aria-hidden="true">↗</span></ButtonLink>}
+          {data.attachment && <ButtonLink href={data.attachment}>Open attachment <span aria-hidden="true">↗</span></ButtonLink>}
         </nav>
       )}
     </header>
@@ -190,7 +187,7 @@ const date = new Intl.DateTimeFormat("en-GB", {
                 </svg>
               </button>
               <button class="button button--quiet button--compact" type="button" aria-label="Next venue photo" data-venue-next>
-                <svg class="button__icon venue-preview__next-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                   <path d="M3 8h10m0 0-4-4m4 4-4 4" />
                 </svg>
               </button>
@@ -203,7 +200,7 @@ const date = new Intl.DateTimeFormat("en-GB", {
     <section class="event-schedule" aria-labelledby="schedule-title">
       <SectionHeading eyebrow="Run of show" id="schedule-title" title="Schedule" />
       <ol role="list">
-        {event.data.schedule.map((item) => (
+        {data.schedule.map((item) => (
           <li>
             <span class="event-schedule__time">{item.time}</span>
             <div>

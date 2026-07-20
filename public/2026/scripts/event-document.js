@@ -1,9 +1,9 @@
-const initVenueGallery = () => {
-  const gallery = document.querySelector("[data-venue-gallery]");
-  const dialog = document.querySelector("[data-venue-dialog]");
-  if (!gallery || !dialog || gallery.dataset.venueGalleryBound) return;
+const initVenueGallery = (eventDocument) => {
+  const gallery = eventDocument.querySelector("[data-venue-gallery]");
+  const dialog = eventDocument.querySelector("[data-venue-dialog]");
+  if (!gallery || !dialog) return;
 
-  const photos = [...gallery.querySelectorAll("[data-venue-photo]")];
+  const photos = gallery.querySelectorAll("[data-venue-photo]");
   const image = dialog.querySelector("[data-venue-preview-image]");
   const picture = dialog.querySelector("[data-venue-picture]");
   const viewport = dialog.querySelector("[data-venue-viewport]");
@@ -13,7 +13,6 @@ const initVenueGallery = () => {
   const root = document.documentElement;
 
   if (!photos.length || !image || !picture || !viewport || !description) return;
-  gallery.dataset.venueGalleryBound = "true";
   photos.forEach((photo) => {
     photo.style.backgroundImage = `url("${photo.dataset.src}")`;
   });
@@ -298,12 +297,8 @@ const initVenueGallery = () => {
   });
 
   viewport.addEventListener("click", (event) => {
-    if (suppressClick) {
+    if (suppressClick || slide) {
       suppressClick = false;
-      event.preventDefault();
-      return;
-    }
-    if (slide) {
       event.preventDefault();
       return;
     }
@@ -361,9 +356,7 @@ const initVenueGallery = () => {
   const finishGesture = (event, cancelled = false) => {
     if (!gesture || gesture.id !== event.pointerId) return;
     const { axis, dragged, offset, zoomed } = gesture;
-    gesture = null;
-    delete picture.dataset.dragging;
-    picture.style.removeProperty("transform");
+    resetGesture();
     suppressClick = dragged;
 
     if (zoomed || !dragged || axis !== "x") return;
@@ -398,9 +391,12 @@ const initVenueGallery = () => {
 };
 
 const initEventDocument = () => {
-  const backLink = document.querySelector("[data-history-back]");
-  if (backLink && !backLink.dataset.historyBackBound) {
-    backLink.dataset.historyBackBound = "true";
+  const eventDocument = document.querySelector(".event-document");
+  if (!eventDocument || eventDocument.dataset.eventDocumentBound) return;
+  eventDocument.dataset.eventDocumentBound = "true";
+
+  const backLink = eventDocument.querySelector("[data-history-back]");
+  if (backLink) {
     backLink.addEventListener("click", (event) => {
       const current = new URL(window.location.href);
       const target = window.__shipatonBackTarget;
@@ -418,13 +414,12 @@ const initEventDocument = () => {
     });
   }
 
-  initVenueGallery();
+  initVenueGallery(eventDocument);
 
-  const article = document.querySelector(".event-document__body");
-  const copyStatus = document.querySelector("[data-heading-copy-status]");
+  const article = eventDocument.querySelector(".event-document__body");
+  const copyStatus = eventDocument.querySelector("[data-heading-copy-status]");
 
-  if (!article || !copyStatus || article.dataset.headingLinksBound) return;
-  article.dataset.headingLinksBound = "true";
+  if (!article || !copyStatus) return;
 
   for (const heading of article.querySelectorAll(":is(h2, h3, h4)[id]")) {
     const label = heading.textContent?.trim() || "section";
@@ -432,9 +427,6 @@ const initEventDocument = () => {
     const button = document.createElement("button");
 
     row.className = "event-document__heading-row";
-    heading.before(row);
-    row.append(heading);
-
     button.className = "event-document__copy-link";
     button.type = "button";
     button.title = `Copy link to ${label}`;
@@ -465,7 +457,8 @@ const initEventDocument = () => {
       }
     });
 
-    row.prepend(button);
+    heading.replaceWith(row);
+    row.append(button, heading);
   }
 };
 

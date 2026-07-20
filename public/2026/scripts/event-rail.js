@@ -1,36 +1,28 @@
 const initEventRail = () => {
   const browser = document.querySelector("[data-event-browser]");
-  const track = browser?.querySelector("[data-event-track]");
-  const teaser = browser?.querySelector("[data-event-teaser]");
+  if (!browser || browser.dataset.eventRailBound) return;
+
+  const track = browser.querySelector("[data-event-track]");
+  const teaser = browser.querySelector("[data-event-teaser]");
   const teaserDeadline = Date.parse(teaser?.dataset.visibleBefore ?? "");
   if (teaser) {
     if (Number.isFinite(teaserDeadline) && Date.now() < teaserDeadline) teaser.hidden = false;
     else teaser.remove();
   }
 
-  const cards = Array.from(browser?.querySelectorAll("[data-event-rail-card]") ?? []);
-  const controls = browser?.querySelector("[data-event-controls]");
-  const counter = browser?.querySelector("[data-event-counter]");
-  const buttons = Array.from(browser?.querySelectorAll("[data-event-direction]") ?? []);
+  const cards = [...browser.querySelectorAll("[data-event-rail-card]")];
+  const controls = browser.querySelector("[data-event-controls]");
+  const counter = browser.querySelector("[data-event-counter]");
+  const buttons = browser.querySelectorAll("[data-event-direction]");
 
-  if (!browser || !track || !cards.length || browser.dataset.eventRailBound) return;
+  if (!track || !cards.length) return;
   browser.dataset.eventRailBound = "true";
   if (controls) controls.hidden = cards.length <= 1;
-  cards.forEach((card) => {
-    if (cards.length > 1) card.setAttribute("tabindex", "0");
-    else card.removeAttribute("tabindex");
-  });
+  if (cards.length > 1) cards.forEach((card) => card.setAttribute("tabindex", "0"));
 
   const controller = new AbortController();
   const { signal } = controller;
-  const todayParts = new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Europe/Budapest"
-  }).formatToParts(new Date());
-  const part = (type) => todayParts.find((item) => item.type === type)?.value ?? "";
-  const today = `${part("year")}-${part("month")}-${part("day")}`;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let activeIndex = -1;
   let centerTarget = null;
@@ -67,13 +59,16 @@ const initEventRail = () => {
 
   const closestCardIndex = () => {
     const railCenter = track.getBoundingClientRect().left + track.clientWidth / 2;
-    return cards.reduce((closest, card, index) => {
+    let closestIndex = 0;
+    let closestDistance = Infinity;
+    cards.forEach((card, index) => {
       const rect = card.getBoundingClientRect();
       const distance = Math.abs(rect.left + rect.width / 2 - railCenter);
-      const closestRect = cards[closest].getBoundingClientRect();
-      const closestDistance = Math.abs(closestRect.left + closestRect.width / 2 - railCenter);
-      return distance < closestDistance ? index : closest;
-    }, 0);
+      if (distance >= closestDistance) return;
+      closestIndex = index;
+      closestDistance = distance;
+    });
+    return closestIndex;
   };
 
   const selectCard = (index, scroll = false) => {

@@ -1,11 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
-
-const freezeDate = async (page: Page, isoDate: string) => {
-  await page.clock.setFixedTime(isoDate);
-};
+import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
-  await freezeDate(page, "2026-07-15T10:00:00+02:00");
+  await page.clock.setFixedTime("2026-07-15T10:00:00+02:00");
 });
 
 test("redirects the root to the current edition", async ({ page }) => {
@@ -131,7 +127,7 @@ test("invites ideas for a potential event before the competition deadline", asyn
 });
 
 test("removes the potential event at the competition deadline", async ({ page }) => {
-  await freezeDate(page, "2026-10-01T06:45:00Z");
+  await page.clock.setFixedTime("2026-10-01T06:45:00Z");
   await page.goto("/2026/");
 
   const event = page.locator('[data-event-card][data-date="2026-08-04"]');
@@ -344,7 +340,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-document__body")).toContainText("Primary languages: English and Hungarian");
   await expect(page.locator(".event-document__body")).toContainText("Food and drinks will be provided.");
   const thumbnail = page.locator(".event-document__header").getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
-  await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.png");
+  await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.webp");
   await expect(thumbnail).toHaveAttribute("width", "1254");
   await expect(thumbnail).toHaveAttribute("height", "1254");
   await expect(page.locator(".event-document__body .event-document__thumbnail")).toHaveCount(0);
@@ -411,9 +407,9 @@ test("previews venue photos accessibly", async ({ context, page }, testInfo) => 
     "The main space can be rearranged with rows of chairs for attendees. A large presentation display sits just beyond the left edge of the photo; the venue has previously hosted groups of around 30–40 people."
   ];
   const sources = [
-    "/2026/events/project-kickoff-venue-terrace.jpg",
-    "/2026/events/project-kickoff-venue-workspace.jpg",
-    "/2026/events/project-kickoff-venue-main-room.jpg"
+    "/2026/events/project-kickoff-venue-terrace.webp",
+    "/2026/events/project-kickoff-venue-workspace.webp",
+    "/2026/events/project-kickoff-venue-main-room.webp"
   ];
   const rail = page.getByRole("list", { name: "Venue photos" });
   const thumbnails = rail.getByRole("button");
@@ -1022,7 +1018,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   ].every((animation) => Number(animation.effect?.getTiming().duration) >= 300))).toBe(true);
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute(
     "src",
-    "/2026/events/project-kickoff-venue-workspace.jpg"
+    "/2026/events/project-kickoff-venue-workspace.webp"
   );
   await dialog.getByRole("button", { name: "Close venue photo preview" }).click();
   if (supportsSharedTransition) {
@@ -1128,7 +1124,7 @@ test("animates the venue preview and respects reduced motion", async ({ page }, 
   await dialog.getByRole("button", { name: "Next venue photo" }).click();
   await expect(dialog.locator("[data-venue-preview-image]")).toHaveAttribute(
     "src",
-    "/2026/events/project-kickoff-venue-workspace.jpg"
+    "/2026/events/project-kickoff-venue-workspace.webp"
   );
   expect(await picture.evaluate((element) => element.getAnimations())).toHaveLength(0);
 });
