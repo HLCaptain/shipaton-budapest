@@ -62,5 +62,6 @@ These official Shipaton assets are excluded from the MIT License:
 - `public/2026/brand/rocket-launch-wide.svg`
 - `public/2026/brand/shipaton-wordmark.svg`
 - `public/2026/brand/shippy-pixel-head.png`
+- `public/2026/brand/shipaton-budapest-social-card.png`
 
-The wordmark and rocket illustration come from the official [Shipaton 2026 media kit](https://www.shipaton.com/media-kit), where they are offered as free-to-use Shipaton assets for event and promotional materials. The pixel head is official Shipaton artwork. All three remain subject to the asset owner's permissions; this repository grants no rights to Shipaton names, marks, or artwork.
+The wordmark and rocket illustration come from the official [Shipaton 2026 media kit](https://www.shipaton.com/media-kit), where they are offered as free-to-use Shipaton assets for event and promotional materials. The social card combines those two assets, and the pixel head is official Shipaton artwork. All four remain subject to the asset owner's permissions; this repository grants no rights to Shipaton names, marks, or artwork.
