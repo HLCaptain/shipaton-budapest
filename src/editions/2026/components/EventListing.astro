@@ -45,6 +45,7 @@ const { events } = Astro.props;
                 <dd>{entry.data.venue}</dd>
               </div>
               {entry.data.hosts && <PersonList kind="hosts" people={entry.data.hosts} />}
+              {entry.data.organizers && <PersonList kind="organizers" people={entry.data.organizers} />}
               {entry.data.speakers && (
                 <PersonList class="event-grid-card__speakers" kind="speakers" people={entry.data.speakers.slice(0, 3)} />
               )}

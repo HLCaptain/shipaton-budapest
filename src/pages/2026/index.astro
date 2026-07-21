@@ -111,6 +111,7 @@ const description =
                   <dd>{event.venue}</dd>
                 </div>
                 {event.hosts && <PersonList kind="hosts" people={event.hosts} />}
+                {event.organizers && <PersonList kind="organizers" people={event.organizers} />}
                 {event.speakers && (
                   <PersonList class="event-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
                 )}
