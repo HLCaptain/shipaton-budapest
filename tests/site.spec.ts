@@ -389,13 +389,21 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   }
 
   const team = page.locator(".event-people__groups");
-  await expect(team.locator("dt")).toHaveText(["Host", "Speakers"]);
+  await expect(team.locator("dt")).toHaveText(["Host", "Organizers", "Speakers"]);
   await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute(
     "href",
     "https://www.linkedin.com/in/balazs-puspok-kiss"
   );
   await expect(team.locator('[data-event-people="hosts"] a')).toHaveAttribute("target", "_blank");
-  await expect(team.locator('[data-event-people="organizers"]')).toHaveCount(0);
+  const organizerLinks = team.locator('[data-event-people="organizers"] a');
+  await expect(organizerLinks).toHaveText([
+    "Tamás Fábián ↗ (opens in a new tab)",
+    "Petra Szász-Perjési ↗ (opens in a new tab)"
+  ]);
+  expect(await organizerLinks.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual([
+    "https://www.linkedin.com/in/tamas--fabian/",
+    "https://www.linkedin.com/in/szpetra/"
+  ]);
   await expect(team.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
