@@ -137,6 +137,10 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "accessible=true" >> "$GITHUB_OUTPUT"
+            if ! grep -q "static.cloudflareinsights.com/beacon.min.js" "$response_file"; then
+              echo "::error::Cloudflare Web Analytics beacon was not injected into the deployment."
+              exit 1
+            fi
           fi
 
       - name: Checkout
