@@ -15,12 +15,20 @@ const image = z.object({
   height: z.number().int().positive()
 });
 
+const eventNotice = z.object({
+  label: z.string().min(1),
+  message: z.string().min(1).max(240),
+  sitewide: z.boolean().default(false)
+});
+
 const events2026 = defineCollection({
   loader: glob({ base: "./src/content/events/2026", pattern: "[^_]*.{md,mdx}" }),
   schema: z.object({
     sequence: z.string(),
     date: z.string().regex(/^2026-\d{2}-\d{2}$/),
     title: z.string(),
+    status: z.enum(["scheduled", "postponed"]).default("scheduled"),
+    notice: eventNotice.optional(),
     format: z.string(),
     description: z.string(),
     time: z.string(),

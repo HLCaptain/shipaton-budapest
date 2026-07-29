@@ -1,13 +1,20 @@
 ---
 import { getCollection } from "astro:content";
 import ButtonLink from "../../editions/2026/components/ButtonLink.astro";
+import MarqueeNotice from "../../editions/2026/components/MarqueeNotice.astro";
 import PersonList from "../../editions/2026/components/PersonList.astro";
-import { eventPath, formatEventDate } from "../../editions/2026/events";
+import {
+  eventPath,
+  formatEventDateLabel,
+  formatEventStatus
+} from "../../editions/2026/events";
 import BaseLayout from "../../editions/2026/layouts/BaseLayout.astro";
 
 const events = (await getCollection("events2026")).sort((a, b) => a.data.date.localeCompare(b.data.date));
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
-const featuredEvent = events.find(({ data }) => data.date >= today) ?? events.at(-1)!;
+const featuredEvent = events.find(({ data }) => data.status === "scheduled" && data.date >= today)
+  ?? events.find(({ data }) => data.status === "postponed")
+  ?? events.at(-1)!;
 const featuredEventUrl = eventPath(featuredEvent.id);
 const competitionDeadline = "2026-10-01T06:45:00Z";
 
@@ -20,14 +27,14 @@ const description =
   <main id="main-content">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero__copy">
-        <p class="eyebrow"><span aria-hidden="true"></span> August—September 2026</p>
+        <p class="eyebrow"><span aria-hidden="true"></span> Budapest · Shipaton 2026</p>
         <h1 id="hero-title">Move your app forward in good company.</h1>
         <p class="hero__lede">
           A welcoming Budapest meetup to share ideas, get practical guidance, and make progress on the app you want to ship.
         </p>
         <div class="hero__actions">
           <ButtonLink href="#events" variant="primary">
-            See the next event <span aria-hidden="true">↓</span>
+            See the event update <span aria-hidden="true">↓</span>
           </ButtonLink>
           <ButtonLink
             href="https://revenuecat-shipaton-2026.devpost.com/"
@@ -65,7 +72,7 @@ const description =
           <h2 id="events-title">Progress starts here.</h2>
         </div>
         <p>
-          Here’s what’s confirmed in Budapest, plus a way to help shape what comes next.
+          Follow the latest Budapest event updates and help shape what comes next.
         </p>
       </div>
 
@@ -89,15 +96,24 @@ const description =
               data-event-card
               data-event-url={eventPath(id)}
               data-date={event.date}
+              data-status={event.status}
               data-title={event.title}
               data-venue={event.venue}
               data-hero-venue={event.heroVenue ?? event.venue}
             >
               <div class="event-card__topline">
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
-                <span class="event-card__state" data-event-state>Scheduled</span>
+                <span class="event-card__state" data-event-state>{formatEventStatus(event.status)}</span>
               </div>
-              <time datetime={event.date}>{formatEventDate(event.date)}</time>
+              {event.notice && (
+                <MarqueeNotice
+                  label={event.notice.label}
+                  message={event.notice.message}
+                />
+              )}
+              {event.status === "scheduled"
+                ? <time datetime={event.date}>{formatEventDateLabel(event.date, event.status)}</time>
+                : <span class="event-card__date-label">{formatEventDateLabel(event.date, event.status)}</span>}
               <h3>{event.title}</h3>
               <p class="event-card__format">{event.format}</p>
               <p class="event-card__description">{event.description}</p>
@@ -162,7 +178,7 @@ const description =
       </div>
 
       <p class="schedule-note">
-        <span aria-hidden="true">✦</span> Registration is open for the confirmed Project Kickoff.
+        <span aria-hidden="true">✦</span> Project Kickoff registration will reopen after a new date and venue are confirmed.
       </p>
     </section>
 

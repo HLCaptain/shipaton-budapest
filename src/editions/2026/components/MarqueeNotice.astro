@@ -1,0 +1,67 @@
+---
+type Props = {
+  href?: string;
+  label?: string;
+  linkLabel?: string;
+  message: string;
+  variant?: "embedded" | "sitewide";
+};
+
+const {
+  href,
+  label = "Important update",
+  linkLabel = "View event update",
+  message,
+  variant = "embedded"
+} = Astro.props;
+const accessibleMessage = message
+  .replace(/\p{Extended_Pictographic}|\uFE0F/gu, "")
+  .replace(/\s+/g, " ")
+  .trim();
+const visualCopies = [0, 1];
+---
+
+<aside
+  class:list={[
+    "marquee-notice",
+    `marquee-notice--${variant}`
+  ]}
+  aria-label={label}
+  data-marquee-notice
+  data-variant={variant}
+>
+  <strong class="marquee-notice__label">{label}</strong>
+  <p class="visually-hidden">{accessibleMessage}</p>
+
+  <div class="marquee-notice__viewport">
+    <div class="marquee-notice__track" aria-hidden="true" data-marquee-track>
+      {visualCopies.map(() => (
+        <span class="marquee-notice__group">
+          {visualCopies.map(() => (
+            <span class="marquee-notice__message">
+              {message}
+              <span class="marquee-notice__separator">✦</span>
+            </span>
+          ))}
+        </span>
+      ))}
+    </div>
+  </div>
+
+  {href && <a class="marquee-notice__link" href={href}>{linkLabel} <span aria-hidden="true">→</span></a>}
+
+  <button
+    class="marquee-notice__toggle"
+    type="button"
+    aria-label={`Pause ${label.toLowerCase()}`}
+    aria-pressed="false"
+    data-marquee-toggle
+  >
+    <svg class="marquee-notice__icon marquee-notice__icon--pause" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4.5 3.5v9m7-9v9" />
+    </svg>
+    <svg class="marquee-notice__icon marquee-notice__icon--play" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="m5 3.5 7 4.5-7 4.5Z" />
+    </svg>
+  </button>
+</aside>
