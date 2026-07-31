@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const postponementNotice = "Budapest Project Kickoff is postponed: the venue withdrew from hosting. We’re searching for a new venue and will share the new date and location soon.";
+const pageNotice = "Kickoff postponed · Venue search";
+const detailNotice = "The venue withdrew. We’re finding a new Budapest venue; a new date will follow.";
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime("2026-07-15T10:00:00+02:00");
@@ -205,67 +206,60 @@ test("links the hero art to the postponed Budapest event", async ({ page }) => {
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
-test("keeps the marquee page-scoped and on the event detail", async ({ page }) => {
-  for (const { path, cardScope, hasDetailNotice } of [
+test("keeps static notices compact and scoped to the right surface", async ({ page }) => {
+  for (const { path, cardScope, variant } of [
     {
       path: "/2026/",
       cardScope: '[data-event-card][data-status="postponed"]',
-      hasDetailNotice: false
+      variant: "sitewide"
     },
     {
       path: "/2026/events/",
       cardScope: '.event-grid-card[data-event-status="postponed"]',
-      hasDetailNotice: false
+      variant: "sitewide"
     },
     {
       path: "/2026/events/project-kickoff/",
       cardScope: null,
-      hasDetailNotice: true
+      variant: "embedded"
     }
   ]) {
     await page.goto(path);
 
-    const sitewide = page.locator('[data-marquee-notice][data-variant="sitewide"]');
-    const detailNotice = page.locator(".event-document__header")
-      .locator('[data-marquee-notice][data-variant="embedded"]');
-    await expect(sitewide).toHaveCount(1);
-    await expect(detailNotice).toHaveCount(hasDetailNotice ? 1 : 0);
-    await expect(page.locator("[data-marquee-notice]")).toHaveCount(hasDetailNotice ? 2 : 1);
+    const notice = page.locator(`[data-notice-banner][data-variant="${variant}"]`);
+    await expect(notice).toHaveCount(1);
+    await expect(page.locator("[data-notice-banner]")).toHaveCount(1);
+    await expect(notice).toHaveAttribute("aria-label", "Postponed");
     if (cardScope) {
-      await expect(page.locator(cardScope).locator("[data-marquee-notice]")).toHaveCount(0);
+      await expect(page.locator(cardScope).locator("[data-notice-banner]")).toHaveCount(0);
     }
 
-    const notices = hasDetailNotice ? [sitewide, detailNotice] : [sitewide];
-    for (const notice of notices) {
-      await expect(notice).toHaveAttribute("aria-label", "Schedule update");
-      await expect(notice.locator(":scope > .visually-hidden")).toHaveCount(1);
-      await expect(notice.locator(":scope > .visually-hidden")).toHaveText(postponementNotice);
-      await expect(notice.locator("[data-marquee-track]")).toHaveAttribute("aria-hidden", "true");
-      await expect(notice.locator(".marquee-notice__message")).toHaveCount(4);
+    const message = notice.locator(".notice-banner__message");
+    if (variant === "sitewide") {
+      await expect(message).toHaveText(pageNotice);
+      await expect(message).toHaveCSS("white-space", "normal");
+      const updateLink = notice.locator(".notice-banner__link");
+      await expect(updateLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
+      await expect(updateLink).toHaveAccessibleName("View Project Kickoff update");
+
+      const noticeBox = await notice.boundingBox();
+      const linkBox = await updateLink.boundingBox();
+      expect(noticeBox).not.toBeNull();
+      expect(linkBox).not.toBeNull();
+      expect(noticeBox!.x).toBeCloseTo(0, 0);
+      expect(noticeBox!.width).toBeCloseTo(page.viewportSize()!.width, 0);
+      expect(noticeBox!.height).toBeLessThanOrEqual(60);
+      expect(linkBox!.width).toBeGreaterThanOrEqual(44);
+      expect(linkBox!.height).toBeGreaterThanOrEqual(44);
+    } else {
+      await expect(notice.locator(".notice-banner__label")).toHaveText("Postponed");
+      await expect(message).toHaveText(detailNotice);
+      await expect(message).toHaveCSS("white-space", "normal");
+      await expect(notice.locator(".notice-banner__link")).toHaveCount(0);
     }
 
-    const updateLink = sitewide.locator(".marquee-notice__link");
-    await expect(updateLink).toHaveAttribute(
-      "href",
-      "/2026/events/project-kickoff/"
-    );
-    await expect(updateLink).toHaveAccessibleName("View update");
-    await expect(updateLink).toBeVisible();
-
-    const noticeBox = await sitewide.boundingBox();
-    const viewportBox = await sitewide.locator(".marquee-notice__viewport").boundingBox();
-    const linkBox = await updateLink.boundingBox();
-    const toggleBox = await sitewide.locator("[data-marquee-toggle]").boundingBox();
-    expect(noticeBox).not.toBeNull();
-    expect(viewportBox).not.toBeNull();
-    expect(linkBox).not.toBeNull();
-    expect(toggleBox).not.toBeNull();
-    expect(toggleBox!.x - (linkBox!.x + linkBox!.width)).toBeGreaterThanOrEqual(7);
-    if ((page.viewportSize()?.width ?? 0) <= 940) {
-      expect(viewportBox!.width).toBeGreaterThan(noticeBox!.width * 0.85);
-    }
-
-    await expect(page.locator("marquee")).toHaveCount(0);
+    await expect(page.locator("marquee, [data-marquee-track], [data-marquee-toggle]")).toHaveCount(0);
+    expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }))).toHaveLength(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
     await expect(page.locator("body")).not.toContainText("Genesys Hungary office");
     await expect(page.locator("body")).not.toContainText("Registration is open");
@@ -274,61 +268,64 @@ test("keeps the marquee page-scoped and on the event detail", async ({ page }) =
   }
 });
 
-test("pauses and resumes the marquee notice", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Marquee motion controls are covered once at desktop size");
+test("keeps the notice motion-free with reduced motion enabled", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/2026/");
 
-  const notice = page.locator('[data-marquee-notice][data-variant="sitewide"]');
-  const track = notice.locator("[data-marquee-track]");
-  const toggle = notice.locator("[data-marquee-toggle]");
-  await page.mouse.move(0, 0);
-  await expect(track).toHaveCSS("animation-name", "marquee-notice-scroll");
-  await expect(track).toHaveCSS("animation-iteration-count", "infinite");
-  await expect(track).toHaveCSS("animation-play-state", "running");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await toggle.focus();
-  await expect(toggle).toHaveCSS("outline-offset", "-4px");
-
-  await toggle.click();
-  await expect(notice).toHaveAttribute("data-marquee-paused", "");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(toggle).toHaveAccessibleName("Resume schedule update");
-  await expect(track).toHaveCSS("animation-play-state", "paused");
-
-  await notice.locator(".marquee-notice__link").click();
-  await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
-  await expect(notice).toHaveAttribute("data-marquee-paused", "");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(toggle).toHaveAccessibleName("Resume schedule update");
-  await expect(track).toHaveCSS("animation-play-state", "paused");
-
-  await toggle.click();
-  await page.mouse.move(0, 0);
-  await expect(notice).not.toHaveAttribute("data-marquee-paused");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(toggle).toHaveAccessibleName("Pause schedule update");
-  await expect(track).toHaveCSS("animation-play-state", "running");
+  const notice = page.locator('[data-notice-banner][data-variant="sitewide"]');
+  await expect(notice).toBeVisible();
+  expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }))).toHaveLength(0);
+  await expect(page.locator("[data-marquee-notice], [data-marquee-track], [data-marquee-toggle]")).toHaveCount(0);
 });
 
-test("renders static notice copy when reduced motion is requested", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/2026/events/project-kickoff/");
+test("fits the full page notice at 320px without clipping its short copy", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "The smallest-width audit only needs one browser project");
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/2026/");
 
-  const notices = page.locator("[data-marquee-notice]");
-  await expect(notices).toHaveCount(2);
-  for (const notice of await notices.all()) {
-    const track = notice.locator("[data-marquee-track]");
-    const messages = notice.locator(".marquee-notice__message");
-    await expect(track).toHaveCSS("animation-name", "none");
-    await expect(track).toHaveCSS("transform", "none");
-    expect(await track.evaluate((element) => element.getAnimations())).toHaveLength(0);
-    await expect(notice.locator("[data-marquee-toggle]")).toBeHidden();
-    await expect(messages.first()).toBeVisible();
-    await expect(messages.first()).toHaveCSS("white-space", "normal");
-    await expect(messages.nth(1)).toBeHidden();
-  }
+  const notice = page.locator('[data-notice-banner][data-variant="sitewide"]');
+  const message = notice.locator(".notice-banner__message");
+  const box = await notice.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeCloseTo(0, 0);
+  expect(box!.width).toBeCloseTo(320, 0);
+  expect(box!.height).toBeLessThanOrEqual(60);
+  const defaultMetrics = await message.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    clientWidth: element.clientWidth,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+    scrollHeight: element.scrollHeight,
+    scrollWidth: element.scrollWidth
+  }));
+  expect(defaultMetrics.scrollWidth).toBeLessThanOrEqual(defaultMetrics.clientWidth);
+  expect(defaultMetrics.scrollHeight).toBeLessThanOrEqual(defaultMetrics.clientHeight);
+  expect(defaultMetrics.clientHeight).toBeLessThanOrEqual(defaultMetrics.lineHeight + 1);
 
-  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await page.evaluate(() => {
+    for (const sheet of document.styleSheets) {
+      try {
+        sheet.insertRule("html { font-size: 200% !important; }", sheet.cssRules.length);
+        return;
+      } catch {}
+    }
+    throw new Error("Unable to apply the text-sizing audit rule");
+  });
+
+  const enlargedMetrics = await message.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    clientWidth: element.clientWidth,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+    scrollHeight: element.scrollHeight,
+    scrollWidth: element.scrollWidth
+  }));
+  expect(enlargedMetrics.scrollWidth).toBeLessThanOrEqual(enlargedMetrics.clientWidth);
+  expect(enlargedMetrics.scrollHeight).toBeLessThanOrEqual(enlargedMetrics.clientHeight);
+  expect(enlargedMetrics.clientHeight).toBeGreaterThan(enlargedMetrics.lineHeight);
+  const enlargedNoticeMetrics = await notice.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth
+  }));
+  expect(enlargedNoticeMetrics.scrollWidth).toBeLessThanOrEqual(enlargedNoticeMetrics.clientWidth);
 });
 
 test("skips same-page anchors when using the detail page's top back link", async ({ page }) => {
@@ -675,8 +672,8 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await page.getByRole("link", { name: "Back to 2026 events", exact: true }).click();
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
-  await expect(page.locator('[data-marquee-notice][data-variant="sitewide"]')).toHaveCount(1);
-  await expect(page.locator(".event-document__header [data-marquee-notice]")).toHaveCount(1);
+  await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(0);
+  await expect(page.locator(".event-document__header [data-notice-banner]")).toHaveCount(1);
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
   await expect(page).toHaveURL(/\/2026\/$/);
@@ -686,7 +683,7 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await expect(page.locator('[data-event-card][aria-current="true"]')).toHaveAttribute("data-date", "2026-08-04");
   await expect(page.locator(".event-controls")).toBeVisible();
   await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
-  await expect(page.locator('[data-marquee-notice][data-variant="sitewide"]')).toHaveCount(1);
+  await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(1);
 });
 
 test("keeps the event detail body aligned with a responsive table of contents", async ({ page }) => {

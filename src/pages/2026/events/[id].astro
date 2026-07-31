@@ -2,7 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
 import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
-import MarqueeNotice from "../../../editions/2026/components/MarqueeNotice.astro";
+import NoticeBanner from "../../../editions/2026/components/NoticeBanner.astro";
 import PersonList from "../../../editions/2026/components/PersonList.astro";
 import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
 import {
@@ -68,9 +68,9 @@ const rsvp = postponed ? undefined : data.rsvp;
         )}
       </div>
       {data.notice && (
-        <MarqueeNotice
+        <NoticeBanner
           label={data.notice.label}
-          message={data.notice.message}
+          message={data.notice.detailMessage ?? data.notice.message}
           variant="embedded"
         />
       )}

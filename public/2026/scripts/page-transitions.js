@@ -16,39 +16,6 @@
     });
   }, true);
 
-  const marqueePreferenceKey = "shipaton-marquee-paused";
-  const readMarqueePreference = () => {
-    try {
-      return sessionStorage.getItem(marqueePreferenceKey) === "true";
-    } catch {
-      return false;
-    }
-  };
-  const applyMarqueePreference = (paused = readMarqueePreference()) => {
-    document.querySelectorAll("[data-marquee-notice]").forEach((notice) => {
-      notice.toggleAttribute("data-marquee-paused", paused);
-      const toggle = notice.querySelector("[data-marquee-toggle]");
-      if (!(toggle instanceof HTMLButtonElement)) return;
-      toggle.setAttribute("aria-pressed", String(paused));
-      const label = notice.getAttribute("aria-label")?.toLowerCase() ?? "announcement";
-      toggle.setAttribute("aria-label", `${paused ? "Resume" : "Pause"} ${label}`);
-    });
-  };
-
-  document.addEventListener("astro:page-load", () => applyMarqueePreference());
-  document.addEventListener("click", ({ target }) => {
-    const toggle = target instanceof Element ? target.closest("[data-marquee-toggle]") : null;
-    if (!(toggle instanceof HTMLButtonElement)) return;
-    const notice = toggle.closest("[data-marquee-notice]");
-    if (!(notice instanceof HTMLElement)) return;
-
-    const paused = !notice.hasAttribute("data-marquee-paused");
-    try {
-      sessionStorage.setItem(marqueePreferenceKey, String(paused));
-    } catch {}
-    applyMarqueePreference(paused);
-  });
-
   const pathDepth = ({ pathname }) => pathname.split("/").filter(Boolean).length;
   const rememberBackTarget = (from, to, index = null) => {
     if (from.origin === to.origin && from.pathname !== to.pathname) {

@@ -17,7 +17,8 @@ const image = z.object({
 
 const eventNotice = z.object({
   label: z.string().min(1),
-  message: z.string().min(1).max(240),
+  message: z.string().min(1).max(96),
+  detailMessage: z.string().min(1).max(180).optional(),
   sitewide: z.boolean().default(false)
 });
 
