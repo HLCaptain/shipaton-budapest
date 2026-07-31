@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const pageNotice = "Kickoff postponed · Venue search";
+const pageNotice = "Kickoff postponed · Venue TBD";
 const detailNotice = "The venue withdrew. We’re finding a new Budapest venue; a new date will follow.";
 
 test.beforeEach(async ({ page }) => {

@@ -277,6 +277,7 @@ svg {
   min-height: 2.75rem;
   margin-inline: auto;
   padding: 0.4rem var(--page-gutter);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.65rem;
 }
 

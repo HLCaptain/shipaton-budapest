@@ -26,7 +26,9 @@ const {
   data-variant={variant}
 >
   <div class="notice-banner__inner">
-    <span class="notice-banner__marker" aria-hidden="true">!</span>
+    {variant === "embedded" && (
+      <span class="notice-banner__marker" aria-hidden="true">!</span>
+    )}
     <span class="notice-banner__copy">
       {variant === "embedded" && <strong class="notice-banner__label">{label}</strong>}
       <span class="notice-banner__message">{message}</span>
