@@ -205,21 +205,38 @@ test("links the hero art to the postponed Budapest event", async ({ page }) => {
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
-test("places the postponement notice sitewide and in every event surface", async ({ page }) => {
-  for (const { path, eventScope } of [
-    { path: "/2026/", eventScope: '[data-event-card][data-status="postponed"]' },
-    { path: "/2026/events/", eventScope: '.event-grid-card[data-event-status="postponed"]' },
-    { path: "/2026/events/project-kickoff/", eventScope: ".event-document__header" }
+test("keeps the marquee page-scoped and on the event detail", async ({ page }) => {
+  for (const { path, cardScope, hasDetailNotice } of [
+    {
+      path: "/2026/",
+      cardScope: '[data-event-card][data-status="postponed"]',
+      hasDetailNotice: false
+    },
+    {
+      path: "/2026/events/",
+      cardScope: '.event-grid-card[data-event-status="postponed"]',
+      hasDetailNotice: false
+    },
+    {
+      path: "/2026/events/project-kickoff/",
+      cardScope: null,
+      hasDetailNotice: true
+    }
   ]) {
     await page.goto(path);
 
     const sitewide = page.locator('[data-marquee-notice][data-variant="sitewide"]');
-    const embedded = page.locator(eventScope).locator('[data-marquee-notice][data-variant="embedded"]');
+    const detailNotice = page.locator(".event-document__header")
+      .locator('[data-marquee-notice][data-variant="embedded"]');
     await expect(sitewide).toHaveCount(1);
-    await expect(embedded).toHaveCount(1);
-    await expect(page.locator("[data-marquee-notice]")).toHaveCount(2);
+    await expect(detailNotice).toHaveCount(hasDetailNotice ? 1 : 0);
+    await expect(page.locator("[data-marquee-notice]")).toHaveCount(hasDetailNotice ? 2 : 1);
+    if (cardScope) {
+      await expect(page.locator(cardScope).locator("[data-marquee-notice]")).toHaveCount(0);
+    }
 
-    for (const notice of [sitewide, embedded]) {
+    const notices = hasDetailNotice ? [sitewide, detailNotice] : [sitewide];
+    for (const notice of notices) {
       await expect(notice).toHaveAttribute("aria-label", "Schedule update");
       await expect(notice.locator(":scope > .visually-hidden")).toHaveCount(1);
       await expect(notice.locator(":scope > .visually-hidden")).toHaveText(postponementNotice);
@@ -227,11 +244,29 @@ test("places the postponement notice sitewide and in every event surface", async
       await expect(notice.locator(".marquee-notice__message")).toHaveCount(4);
     }
 
-    await expect(sitewide.locator(".marquee-notice__link")).toHaveAttribute(
+    const updateLink = sitewide.locator(".marquee-notice__link");
+    await expect(updateLink).toHaveAttribute(
       "href",
       "/2026/events/project-kickoff/"
     );
+    await expect(updateLink).toHaveAccessibleName("View update");
+    await expect(updateLink).toBeVisible();
+
+    const noticeBox = await sitewide.boundingBox();
+    const viewportBox = await sitewide.locator(".marquee-notice__viewport").boundingBox();
+    const linkBox = await updateLink.boundingBox();
+    const toggleBox = await sitewide.locator("[data-marquee-toggle]").boundingBox();
+    expect(noticeBox).not.toBeNull();
+    expect(viewportBox).not.toBeNull();
+    expect(linkBox).not.toBeNull();
+    expect(toggleBox).not.toBeNull();
+    expect(toggleBox!.x - (linkBox!.x + linkBox!.width)).toBeGreaterThanOrEqual(7);
+    if ((page.viewportSize()?.width ?? 0) <= 940) {
+      expect(viewportBox!.width).toBeGreaterThan(noticeBox!.width * 0.85);
+    }
+
     await expect(page.locator("marquee")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
     await expect(page.locator("body")).not.toContainText("Genesys Hungary office");
     await expect(page.locator("body")).not.toContainText("Registration is open");
     await expect(page.locator('a[href="https://luma.com/9b5mxujb"]')).toHaveCount(0);
@@ -277,7 +312,7 @@ test("pauses and resumes the marquee notice", async ({ page }, testInfo) => {
 
 test("renders static notice copy when reduced motion is requested", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/2026/");
+  await page.goto("/2026/events/project-kickoff/");
 
   const notices = page.locator("[data-marquee-notice]");
   await expect(notices).toHaveCount(2);

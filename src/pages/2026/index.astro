@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import ButtonLink from "../../editions/2026/components/ButtonLink.astro";
-import MarqueeNotice from "../../editions/2026/components/MarqueeNotice.astro";
 import PersonList from "../../editions/2026/components/PersonList.astro";
 import {
   eventPath,
@@ -105,12 +104,6 @@ const description =
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
                 <span class="event-card__state" data-event-state>{formatEventStatus(event.status)}</span>
               </div>
-              {event.notice && (
-                <MarqueeNotice
-                  label={event.notice.label}
-                  message={event.notice.message}
-                />
-              )}
               {event.status === "scheduled"
                 ? <time datetime={event.date}>{formatEventDateLabel(event.date, event.status)}</time>
                 : <span class="event-card__date-label">{formatEventDateLabel(event.date, event.status)}</span>}

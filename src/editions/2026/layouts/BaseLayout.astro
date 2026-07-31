@@ -67,7 +67,7 @@ const sitewideNotices = (await getCollection("events2026"))
       <MarqueeNotice
         href={eventPath(event.id)}
         label={event.data.notice!.label}
-        linkLabel={`View ${event.data.title}`}
+        linkLabel="View update"
         message={event.data.notice!.message}
         variant="sitewide"
       />

@@ -48,20 +48,25 @@ const visualCopies = [0, 1];
     </div>
   </div>
 
-  {href && <a class="marquee-notice__link" href={href}>{linkLabel} <span aria-hidden="true">→</span></a>}
-
-  <button
-    class="marquee-notice__toggle"
-    type="button"
-    aria-label={`Pause ${label.toLowerCase()}`}
-    aria-pressed="false"
-    data-marquee-toggle
-  >
-    <svg class="marquee-notice__icon marquee-notice__icon--pause" viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M4.5 3.5v9m7-9v9" />
-    </svg>
-    <svg class="marquee-notice__icon marquee-notice__icon--play" viewBox="0 0 16 16" aria-hidden="true">
-      <path d="m5 3.5 7 4.5-7 4.5Z" />
-    </svg>
-  </button>
+  <div class="marquee-notice__actions" data-has-link={href ? "" : undefined}>
+    {href && (
+      <a class="marquee-notice__link" href={href}>
+        {linkLabel} <span aria-hidden="true">→</span>
+      </a>
+    )}
+    <button
+      class="marquee-notice__toggle"
+      type="button"
+      aria-label={`Pause ${label.toLowerCase()}`}
+      aria-pressed="false"
+      data-marquee-toggle
+    >
+      <svg class="marquee-notice__icon marquee-notice__icon--pause" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M4.5 3.5v9m7-9v9" />
+      </svg>
+      <svg class="marquee-notice__icon marquee-notice__icon--play" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="m5 3.5 7 4.5-7 4.5Z" />
+      </svg>
+    </button>
+  </div>
 </aside>

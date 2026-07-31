@@ -5,7 +5,6 @@ import {
   formatEventDateLabel,
   formatEventStatus
 } from "../events";
-import MarqueeNotice from "./MarqueeNotice.astro";
 import PersonList from "./PersonList.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
@@ -43,12 +42,6 @@ const { events } = Astro.props;
                 }
               </span>
             </div>
-            {entry.data.notice && (
-              <MarqueeNotice
-                label={entry.data.notice.label}
-                message={entry.data.notice.message}
-              />
-            )}
             <h2><a class="event-grid-card__link" href={eventPath(entry.id)}>{entry.data.title}</a></h2>
             <p class="event-grid-card__format">{entry.data.format}</p>
             <p>{entry.data.description}</p>
