@@ -252,6 +252,137 @@ svg {
   box-shadow: inset 0 -2px var(--orange);
 }
 
+.notice-banner {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.notice-banner--sitewide {
+  width: 100%;
+  border-block: 1px solid var(--orange);
+  background: var(--space);
+  color: var(--paper);
+}
+
+.notice-banner__inner {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.notice-banner--sitewide .notice-banner__inner {
+  width: min(100%, var(--max-width));
+  min-height: 2.75rem;
+  margin-inline: auto;
+  padding: 0.4rem var(--page-gutter);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+}
+
+.notice-banner__marker {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--orange);
+  color: var(--space);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.notice-banner__copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.notice-banner__label {
+  flex: 0 0 auto;
+  color: var(--orange-dark);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.075em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.notice-banner__message {
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.notice-banner__link {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.notice-banner__link:hover {
+  background: var(--orange);
+  color: var(--space);
+}
+
+.notice-banner__link:focus-visible {
+  outline-color: var(--orange);
+  outline-offset: 1px;
+}
+
+.notice-banner__link svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.notice-banner--embedded {
+  margin: 1.1rem 0;
+  border-left: 3px solid var(--orange);
+  background: rgb(255 129 0 / 0.08);
+  color: var(--ink);
+}
+
+.notice-banner--embedded .notice-banner__inner {
+  padding: 0.7rem 0.8rem;
+  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+.notice-banner--embedded .notice-banner__marker {
+  margin-top: 0.05rem;
+}
+
+.notice-banner--embedded .notice-banner__copy {
+  display: block;
+}
+
+.notice-banner--embedded .notice-banner__label {
+  margin-right: 0.45rem;
+}
+
+.notice-banner--embedded .notice-banner__message {
+  font-size: 0.85rem;
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
 .hero {
   display: grid;
   width: min(100%, var(--max-width));
@@ -637,7 +768,14 @@ svg {
   color: rgb(255 250 243 / 0.52);
 }
 
+.event-card[data-state="postponed"] .event-card__state {
+  border-color: var(--orange);
+  background: var(--orange);
+  color: var(--space);
+}
+
 .event-card time,
+.event-card__date-label,
 .event-card__teaser-kicker {
   display: block;
   margin-top: clamp(2rem, 5vw, 3.5rem);
@@ -899,7 +1037,7 @@ a.event-card__soon:hover {
   text-transform: uppercase;
 }
 
-.event-grid-card__topline time {
+.event-grid-card__topline > :last-child {
   color: var(--muted);
   text-align: right;
 }
@@ -909,6 +1047,10 @@ a.event-card__soon:hover {
   font-size: clamp(2.5rem, 5vw, 4.2rem);
   letter-spacing: -0.05em;
   line-height: 0.95;
+}
+
+.event-grid-card[data-event-status="postponed"] {
+  border-color: var(--orange);
 }
 
 .event-grid-card__link {
@@ -1539,6 +1681,17 @@ body:has(.venue-preview[open]) {
   list-style: none;
 }
 
+.event-schedule__status {
+  max-width: 46rem;
+  margin: -0.25rem 0 2rem;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--orange);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .event-schedule > ol > li {
   position: relative;
   display: grid;
@@ -2129,6 +2282,27 @@ body:has(.venue-preview[open]) {
     display: none;
   }
 
+  .notice-banner--sitewide .notice-banner__inner {
+    min-height: 2.65rem;
+    padding-block: 6px;
+    padding-inline:
+      max(12px, env(safe-area-inset-left))
+      max(12px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+
+  .notice-banner--sitewide .notice-banner__message {
+    font-size: 0.72rem;
+  }
+
+  .notice-banner--embedded {
+    margin-block: 0.9rem;
+  }
+
+  .notice-banner--embedded .notice-banner__inner {
+    padding: 0.65rem 0.7rem;
+  }
+
   .hero {
     padding-block: 3.75rem 4.5rem;
     gap: 3.25rem;
@@ -2238,4 +2412,5 @@ body:has(.venue-preview[open]) {
   ::view-transition-new(root) {
     animation: none;
   }
+
 }

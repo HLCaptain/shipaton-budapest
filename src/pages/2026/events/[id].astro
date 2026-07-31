@@ -2,9 +2,13 @@
 import type { CollectionEntry } from "astro:content";
 import { getCollection, render } from "astro:content";
 import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
+import NoticeBanner from "../../../editions/2026/components/NoticeBanner.astro";
 import PersonList from "../../../editions/2026/components/PersonList.astro";
 import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
-import { formatEventDate } from "../../../editions/2026/events";
+import {
+  formatEventDateLabel,
+  formatEventStatus
+} from "../../../editions/2026/events";
 import BaseLayout from "../../../editions/2026/layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
@@ -29,7 +33,9 @@ const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 
 const thumbnail = data.thumbnail;
 const venueImages = data.venueImages ?? [];
 const firstVenueImage = venueImages[0]!;
-const date = formatEventDate(data.date);
+const date = formatEventDateLabel(data.date, data.status);
+const postponed = data.status === "postponed";
+const rsvp = postponed ? undefined : data.rsvp;
 ---
 
 <BaseLayout title={`${data.title} · Shipaton Budapest`} description={data.description}>
@@ -44,7 +50,7 @@ const date = formatEventDate(data.date);
     <header class="event-document__header">
       <div class:list={{ "event-document__hero--with-thumbnail": Boolean(thumbnail) }}>
         <div class="event-document__hero-copy">
-          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {data.sequence} · {date}</p>
+          <p class="eyebrow"><span aria-hidden="true"></span> Orbit {data.sequence} · {formatEventStatus(data.status)}</p>
           <h1>{data.title}</h1>
           <p>{data.description}</p>
         </div>
@@ -61,10 +67,17 @@ const date = formatEventDate(data.date);
           />
         )}
       </div>
+      {data.notice && (
+        <NoticeBanner
+          label={data.notice.label}
+          message={data.notice.detailMessage ?? data.notice.message}
+          variant="embedded"
+        />
+      )}
       <dl class="event-document__facts">
         <div>
           <dt>Date</dt>
-          <dd><time datetime={data.date}>{date}</time></dd>
+          <dd>{postponed ? date : <time datetime={data.date}>{date}</time>}</dd>
         </div>
         <div>
           <dt>Time</dt>
@@ -85,8 +98,10 @@ const date = formatEventDate(data.date);
         <div>
           <dt>RSVP</dt>
           <dd>
-            {data.rsvp
-              ? <a href={data.rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
+            {postponed
+              ? <span>Paused until the new date and venue are confirmed</span>
+              : rsvp
+              ? <a href={rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
               : <span>Local registration opens soon · <a href="https://www.shipaton.com/events" rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
           </dd>
         </div>
@@ -94,10 +109,10 @@ const date = formatEventDate(data.date);
       <ul class="tag-list event-document__tags" aria-label="Event tags">
         {data.tags.map((tag) => <li>{tag}</li>)}
       </ul>
-      {(data.rsvp || data.presentation || data.attachment) && (
+      {(rsvp || data.presentation || data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
-          {data.rsvp && (
-            <ButtonLink href={data.rsvp} rel="noreferrer" variant="primary">
+          {rsvp && (
+            <ButtonLink href={rsvp} rel="noreferrer" variant="primary">
               RSVP <span aria-hidden="true">↗</span>
             </ButtonLink>
           )}
@@ -198,11 +213,22 @@ const date = formatEventDate(data.date);
     )}
 
     <section class="event-schedule" aria-labelledby="schedule-title">
-      <SectionHeading eyebrow="Run of show" id="schedule-title" title="Schedule" />
+      <SectionHeading
+        eyebrow={postponed ? "Provisional plan" : "Run of show"}
+        id="schedule-title"
+        title={postponed ? "Planned schedule" : "Schedule"}
+      />
+      {postponed && (
+        <p class="event-schedule__status">
+          The session plan remains provisional; every time will be reconfirmed with the new date and venue.
+        </p>
+      )}
       <ol role="list">
-        {data.schedule.map((item) => (
+        {data.schedule.map((item, index) => (
           <li>
-            <span class="event-schedule__time">{item.time}</span>
+            <span class="event-schedule__time">
+              {postponed ? String(index + 1).padStart(2, "0") : item.time}
+            </span>
             <div>
               <h3>{item.emoji && <span aria-hidden="true">{item.emoji}</span>} {item.title}</h3>
               <p>{item.description}</p>

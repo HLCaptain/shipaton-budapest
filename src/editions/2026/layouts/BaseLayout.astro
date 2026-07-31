@@ -1,6 +1,9 @@
 ---
 import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
+import { getCollection } from "astro:content";
+import NoticeBanner from "../components/NoticeBanner.astro";
+import { eventPath } from "../events";
 
 type Props = {
   title: string;
@@ -12,6 +15,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 const socialImage = new URL("/2026/brand/shipaton-budapest-social-card.png", Astro.site);
 const socialImageAlt = "Shipaton Budapest 2026 with Shippy launching in an orange rocket";
 const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
+const sitewideNotices = (await getCollection("events2026"))
+  .filter(({ data }) => data.notice?.sitewide)
+  .sort((a, b) => a.data.date.localeCompare(b.data.date))
+  .slice(0, 1)
+  .filter((event) => Astro.url.pathname !== eventPath(event.id));
 ---
 
 <!doctype html>
@@ -57,6 +65,15 @@ const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
         <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
+    {sitewideNotices.map((event) => (
+      <NoticeBanner
+        href={eventPath(event.id)}
+        label={event.data.notice!.label}
+        linkLabel={`View ${event.data.title} update`}
+        message={event.data.notice!.message}
+        variant="sitewide"
+      />
+    ))}
     <div class="page-transition">
       <slot />
     </div>
@@ -108,7 +125,7 @@ const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
       </div>
 
       <div class="site-footer__bottom">
-        <p>Community-led in Budapest · August—September 2026</p>
+        <p>Community-led in Budapest · Shipaton 2026</p>
       </div>
     </footer>
   </body>

@@ -40,6 +40,13 @@ const initEventRail = () => {
   const restoreSnapping = () => track.style.removeProperty("scroll-snap-type");
 
   cards.forEach((card) => {
+    const status = card.dataset.status;
+    if (status === "postponed") {
+      card.dataset.state = status;
+      const stateLabel = card.querySelector("[data-event-state]");
+      if (stateLabel) stateLabel.textContent = "Postponed";
+      return;
+    }
     const date = card.dataset.date;
     if (!date) return;
     const state = date < today ? "Past" : date === today ? "Today" : "Upcoming";
@@ -81,7 +88,10 @@ const initEventRail = () => {
     cards.forEach((card, cardIndex) => {
       const selected = cardIndex === activeIndex;
       card.toggleAttribute("data-selected", selected);
-      if (selected) card.setAttribute("aria-current", card.dataset.date ? "date" : "true");
+      if (selected) {
+        const current = card.dataset.date && card.dataset.status !== "postponed" ? "date" : "true";
+        card.setAttribute("aria-current", current);
+      }
       else card.removeAttribute("aria-current");
     });
     if (counter) counter.value = `${activeIndex + 1} / ${cards.length}`;
@@ -97,8 +107,17 @@ const initEventRail = () => {
     if (centerTarget === null) restoreSnapping();
   };
 
-  const firstUpcoming = cards.findIndex((card) => Boolean(card.dataset.date) && card.dataset.date >= today);
-  const featuredIndex = firstUpcoming >= 0 ? firstUpcoming : cards.length - 1;
+  const firstUpcoming = cards.findIndex(
+    (card) => card.dataset.status !== "postponed"
+      && Boolean(card.dataset.date)
+      && card.dataset.date >= today
+  );
+  const firstPostponed = cards.findIndex((card) => card.dataset.status === "postponed");
+  const featuredIndex = firstUpcoming >= 0
+    ? firstUpcoming
+    : firstPostponed >= 0
+      ? firstPostponed
+      : cards.length - 1;
   const featuredCard = cards[featuredIndex];
   const featuredLink = document.querySelector("[data-featured-event]");
   selectCard(featuredIndex);
@@ -133,7 +152,7 @@ const initEventRail = () => {
     card.addEventListener(
       "click",
       (event) => {
-        if (event.target.closest("a")) restoreSnapping();
+        if (event.target.closest("a, button")) restoreSnapping();
         else selectCard(index, true);
       },
       { signal }

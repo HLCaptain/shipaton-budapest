@@ -1,6 +1,10 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import { eventPath, formatEventDate } from "../events";
+import {
+  eventPath,
+  formatEventDateLabel,
+  formatEventStatus
+} from "../events";
 import PersonList from "./PersonList.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
@@ -27,10 +31,16 @@ const { events } = Astro.props;
     <ol class="event-grid" aria-label="2026 Shipaton Budapest events">
       {events.map((entry) => (
         <li>
-          <article class="event-grid-card">
+          <article class="event-grid-card" data-event-status={entry.data.status}>
             <div class="event-grid-card__topline">
               <span>Orbit {entry.data.sequence}</span>
-              <time datetime={entry.data.date}>{formatEventDate(entry.data.date)}</time>
+              <span>
+                {formatEventStatus(entry.data.status)} · {
+                  entry.data.status === "scheduled"
+                    ? <time datetime={entry.data.date}>{formatEventDateLabel(entry.data.date, entry.data.status)}</time>
+                    : formatEventDateLabel(entry.data.date, entry.data.status)
+                }
+              </span>
             </div>
             <h2><a class="event-grid-card__link" href={eventPath(entry.id)}>{entry.data.title}</a></h2>
             <p class="event-grid-card__format">{entry.data.format}</p>
