@@ -336,9 +336,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "18:00",
     "18:20",
     "18:30",
-    "19:05",
-    "19:15",
-    "19:25",
+    "19:30",
+    "19:40",
+    "19:50",
     "20:50"
   ]);
   const scheduleEmojis = page.locator('.event-schedule h3 > span[aria-hidden="true"]');
@@ -426,7 +426,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   }
 
   const team = page.locator(".event-people__groups");
-  await expect(team.locator("dt")).toHaveText(["Organizers", "Speakers"]);
+  await expect(team.locator("dt")).toHaveText(["Organizer", "Speakers"]);
   await expect(team.locator('[data-event-people="hosts"]')).toHaveCount(0);
   const organizerLinks = team.locator('[data-event-people="organizers"] a');
   await expect(organizerLinks).toHaveText(["Balázs Püspök-Kiss ↗ (opens in a new tab)"]);
