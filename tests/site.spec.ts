@@ -312,9 +312,11 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "href",
     "https://luma.com/9b5mxujb"
   );
-  await expect(page.getByRole("navigation", { name: "Event resources" }))
-    .getByRole("link", { name: "RSVP" })
-    .toHaveAttribute("href", "https://luma.com/9b5mxujb");
+  const resources = page.getByRole("navigation", { name: "Event resources" });
+  await expect(resources.getByRole("link", { name: "RSVP" })).toHaveAttribute(
+    "href",
+    "https://luma.com/9b5mxujb"
+  );
   // Venue photos can be added once current Puzl imagery is available.
   await expect(page.locator("[data-venue-gallery], [data-venue-dialog]")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
