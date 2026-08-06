@@ -308,6 +308,10 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(facts).toContainText("18:00–21:00");
   await expect(facts).toContainText("Puzl CowOrKing, Budapest");
   await expect(facts).toContainText("Mobile development · Idea development · Mentoring");
+  await expect(facts.getByRole("link", { name: /Puzl CowOrKing, Budapest/ })).toHaveAttribute(
+    "href",
+    "https://maps.app.goo.gl/ZqMrZSwVsqHFw7AeA"
+  );
   await expect(facts.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
     "href",
     "https://luma.com/9b5mxujb"
@@ -317,8 +321,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "href",
     "https://luma.com/9b5mxujb"
   );
-  // Venue photos can be added once current Puzl imagery is available.
-  await expect(page.locator("[data-venue-gallery], [data-venue-dialog]")).toHaveCount(0);
+  await expect(page.locator("[data-venue-gallery]")).toHaveCount(1);
+  await expect(page.locator("[data-venue-dialog]")).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "Venue photos" }).getByRole("button")).toHaveCount(3);
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
   await expect(page.locator(".event-schedule__status")).toHaveCount(0);
   await expect(page.locator(".event-schedule > ol > li")).toHaveCount(7);
@@ -447,6 +452,58 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/$/);
 });
 
+test("previews the Puzl venue photos accessibly", async ({ page }) => {
+  await page.goto("/2026/events/project-kickoff/");
+
+  const sources = [
+    "/2026/events/project-kickoff-venue-puzl-talk-space.webp",
+    "/2026/events/project-kickoff-venue-puzl-workspace.webp",
+    "/2026/events/project-kickoff-venue-puzl-lounge.webp"
+  ];
+  const alts = [
+    "Open event space at Puzl CowOrKing with a seated conference audience viewed from above",
+    "Open coworking area at Puzl CowOrKing with shared desks, glass meeting rooms, plants and a yellow sofa",
+    "Multi-level lounge at Puzl CowOrKing with stepped wooden seating, sofas, a green wall and glass offices"
+  ];
+  const descriptions = [
+    "This open event area can be arranged with audience seating for the lightning talks, with space to stand around the perimeter.",
+    "Shared tables and adjacent meeting rooms provide flexible space for small-group workshops and mentoring.",
+    "The central lounge offers informal seating for group matching, breaks and conversations between workshop sessions."
+  ];
+  const rail = page.getByRole("list", { name: "Venue photos" });
+  const thumbnails = rail.getByRole("button");
+
+  await expect(thumbnails).toHaveCount(3);
+  for (let index = 0; index < sources.length; index += 1) {
+    const image = thumbnails.nth(index).getByRole("img", { name: alts[index] });
+    await expect(image).toHaveAttribute("src", sources[index]);
+    await expect(image).toHaveAttribute("width", "1000");
+    await expect(image).toHaveAttribute("height", "667");
+    await expect(image).toHaveAttribute("loading", "lazy");
+  }
+
+  const opener = thumbnails.first();
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Venue photo preview" });
+  const preview = dialog.locator("[data-venue-preview-image]");
+  const description = dialog.locator("[data-venue-description]");
+  await expect(dialog).toBeVisible();
+  await expect(preview).toHaveAttribute("src", sources[0]);
+  await expect(preview).toHaveAttribute("alt", alts[0]);
+  await expect(description).toHaveText(descriptions[0]);
+
+  await dialog.getByRole("button", { name: "Next venue photo" }).click();
+  await expect(preview).toHaveAttribute("src", sources[1]);
+  await expect(preview).toHaveAttribute("alt", alts[1]);
+  await expect(description).toHaveText(descriptions[1]);
+
+  await dialog.getByRole("button", { name: "Previous venue photo" }).click();
+  await expect(preview).toHaveAttribute("src", sources[0]);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(opener).toBeFocused();
+});
+
 test("keeps page motion directional and stable from a scrolled route", async ({ page }) => {
   await page.goto("/2026/");
 
@@ -570,6 +627,12 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
   await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(0);
   await expect(page.locator(".event-document__header [data-notice-banner]")).toHaveCount(0);
+  const venueOpener = page.getByRole("list", { name: "Venue photos" }).getByRole("button").first();
+  await venueOpener.click();
+  const venueDialog = page.getByRole("dialog", { name: "Venue photo preview" });
+  await expect(venueDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(venueDialog).not.toBeVisible();
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
   await expect(page).toHaveURL(/\/2026\/$/);
