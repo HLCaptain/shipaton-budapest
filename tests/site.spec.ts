@@ -390,7 +390,7 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-schedule > ol > li").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(page.getByRole("navigation", { name: "On this page" }).getByRole("link", { name: "Lightning talks" })).toHaveAttribute("href", "#lightning-talks");
   await expect(page.locator(".event-document__body")).toContainText("Primary languages: English and Hungarian");
-  await expect(page.locator(".event-document__body")).toContainText("Food and drinks will be provided.");
+  await expect(page.locator(".event-document__body")).toContainText("Food and drinks will be provided at the venue.");
   const thumbnail = page.locator(".event-document__header").getByRole("img", { name: /Ship-a-ton Budapest Kickoff 2026 poster/ });
   await expect(thumbnail).toHaveAttribute("src", "/2026/events/project-kickoff-thumbnail.webp");
   await expect(thumbnail).toHaveAttribute("width", "1254");
