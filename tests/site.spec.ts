@@ -312,7 +312,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "href",
     "https://luma.com/9b5mxujb"
   );
-  await expect(page.locator(".event-document__resources")).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Event resources" }))
+    .getByRole("link", { name: "RSVP" })
+    .toHaveAttribute("href", "https://luma.com/9b5mxujb");
   // Venue photos can be added once current Puzl imagery is available.
   await expect(page.locator("[data-venue-gallery], [data-venue-dialog]")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
@@ -778,7 +780,7 @@ test("selects and extrudes the event without changing its layout footprint", asy
     offsetWidth: (element as HTMLElement).offsetWidth
   }));
 
-  await expect(card).toHaveAttribute("aria-current", "true");
+  await expect(card).toHaveAttribute("aria-current", "date");
   await expect.poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow)).toContain("rgb(255, 129, 0)");
   await expect.poll(() => card.evaluate((element) => getComputedStyle(element).translate)).toMatch(/^-/);
   const after = await card.evaluate((element) => {
