@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const pageNotice = "Kickoff postponed · Venue TBD";
-const detailNotice = "The venue withdrew. We’re finding a new Budapest venue; a new date will follow.";
-
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime("2026-07-15T10:00:00+02:00");
 });
@@ -38,7 +35,7 @@ test("fades in external SVG artwork after it loads", async ({ page }) => {
   ]);
 });
 
-test("opens on the postponed event without redundant navigation", async ({ page }) => {
+test("opens on the scheduled event without redundant navigation", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -47,16 +44,16 @@ test("opens on the postponed event without redundant navigation", async ({ page 
   await page.goto("/2026/");
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
-  const event = page.locator('[data-event-card][data-date="2026-08-04"]');
+  const event = page.locator('[data-event-card][data-date="2026-08-13"]');
   const teaser = page.locator("[data-event-teaser]");
   await expect(page.locator("[data-event-rail-card]")).toHaveCount(2);
   await expect(page.locator("[data-event-card]")).toHaveCount(1);
   await expect(teaser).toBeVisible();
-  await expect(event).toHaveAttribute("aria-current", "true");
-  await expect(event).toHaveAttribute("data-status", "postponed");
-  await expect(event).toHaveAttribute("data-state", "postponed");
-  await expect(event.locator("[data-event-state]")).toHaveText("Postponed");
-  await expect(event.locator(".event-card__date-label")).toHaveText("New date to be announced");
+  await expect(event).toHaveAttribute("aria-current", "date");
+  await expect(event).toHaveAttribute("data-status", "scheduled");
+  await expect(event).toHaveAttribute("data-state", "upcoming");
+  await expect(event.locator("[data-event-state]")).toHaveText("Upcoming");
+  await expect(event.locator("time")).toHaveText("13 August 2026");
   await expect(event.locator('[data-event-people="organizers"]')).toContainText("Balázs Püspök-Kiss");
   await expect(event.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
@@ -158,7 +155,7 @@ test("removes the potential event at the competition deadline", async ({ page })
   await page.clock.setFixedTime("2026-10-01T06:45:00Z");
   await page.goto("/2026/");
 
-  const event = page.locator('[data-event-card][data-date="2026-08-04"]');
+  const event = page.locator('[data-event-card][data-date="2026-08-13"]');
   await expect(page.locator("[data-event-teaser]")).toHaveCount(0);
   await expect(page.locator("[data-event-rail-card]")).toHaveCount(1);
   await expect(page.locator(".event-controls")).toBeHidden();
@@ -171,7 +168,7 @@ test("keeps content inside the viewport and exposes the important links", async 
   await page.goto("/2026/");
 
   await expect(page.getByRole("link", { name: "Events", exact: true })).toHaveAttribute("href", "/2026/events/");
-  await expect(page.getByRole("link", { name: "See the event update" })).toHaveAttribute("href", "#events");
+  await expect(page.getByRole("link", { name: "See the event schedule" })).toHaveAttribute("href", "#events");
   await expect(page.getByRole("link", { name: /Join Shipaton/ })).toHaveAttribute(
     "href",
     "https://revenuecat-shipaton-2026.devpost.com/"
@@ -196,136 +193,32 @@ test("keeps content inside the viewport and exposes the important links", async 
   expect(pageWeight.bytes).toBeLessThan(300 * 1024);
 });
 
-test("links the hero art to the postponed Budapest event", async ({ page }) => {
+test("links the hero art to the scheduled Budapest event", async ({ page }) => {
   await page.goto("/2026/");
 
   const heroLink = page.getByRole("link", { name: "View Project Kickoff event details" });
   await expect(heroLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
-  await expect(heroLink.locator("[data-featured-location]")).toHaveText("New venue search underway");
+  await expect(heroLink.locator("[data-featured-location]")).toHaveText("Puzl CowOrKing · Budapest");
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
 });
 
-test("keeps static notices compact and scoped to the right surface", async ({ page }) => {
-  for (const { path, cardScope, variant } of [
-    {
-      path: "/2026/",
-      cardScope: '[data-event-card][data-status="postponed"]',
-      variant: "sitewide"
-    },
-    {
-      path: "/2026/events/",
-      cardScope: '.event-grid-card[data-event-status="postponed"]',
-      variant: "sitewide"
-    },
-    {
-      path: "/2026/events/project-kickoff/",
-      cardScope: null,
-      variant: "embedded"
-    }
-  ]) {
+test("removes the obsolete postponement notice from every event surface", async ({ page }) => {
+  for (const path of ["/2026/", "/2026/events/", "/2026/events/project-kickoff/"]) {
     await page.goto(path);
-
-    const notice = page.locator(`[data-notice-banner][data-variant="${variant}"]`);
-    await expect(notice).toHaveCount(1);
-    await expect(page.locator("[data-notice-banner]")).toHaveCount(1);
-    await expect(notice).toHaveAttribute("aria-label", "Postponed");
-    if (cardScope) {
-      await expect(page.locator(cardScope).locator("[data-notice-banner]")).toHaveCount(0);
-    }
-
-    const message = notice.locator(".notice-banner__message");
-    if (variant === "sitewide") {
-      await expect(message).toHaveText(pageNotice);
-      await expect(message).toHaveCSS("white-space", "normal");
-      const updateLink = notice.locator(".notice-banner__link");
-      await expect(updateLink).toHaveAttribute("href", "/2026/events/project-kickoff/");
-      await expect(updateLink).toHaveAccessibleName("View Project Kickoff update");
-
-      const noticeBox = await notice.boundingBox();
-      const linkBox = await updateLink.boundingBox();
-      expect(noticeBox).not.toBeNull();
-      expect(linkBox).not.toBeNull();
-      expect(noticeBox!.x).toBeCloseTo(0, 0);
-      expect(noticeBox!.width).toBeCloseTo(page.viewportSize()!.width, 0);
-      expect(noticeBox!.height).toBeLessThanOrEqual(60);
-      expect(linkBox!.width).toBeGreaterThanOrEqual(44);
-      expect(linkBox!.height).toBeGreaterThanOrEqual(44);
-    } else {
-      await expect(notice.locator(".notice-banner__label")).toHaveText("Postponed");
-      await expect(message).toHaveText(detailNotice);
-      await expect(message).toHaveCSS("white-space", "normal");
-      await expect(notice.locator(".notice-banner__link")).toHaveCount(0);
-    }
-
-    await expect(page.locator("marquee, [data-marquee-track], [data-marquee-toggle]")).toHaveCount(0);
-    expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }))).toHaveLength(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
-    await expect(page.locator("body")).not.toContainText("Genesys Hungary office");
-    await expect(page.locator("body")).not.toContainText("Registration is open");
-    await expect(page.locator('a[href="https://luma.com/9b5mxujb"]')).toHaveCount(0);
-    await expect(page.locator('a[href="https://maps.app.goo.gl/4Qk2mNq2eZ7592NPA"]')).toHaveCount(0);
+    await expect(page.locator("[data-notice-banner]")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("Kickoff postponed");
+    await expect(page.locator("body")).not.toContainText("Venue TBD");
+    await expect(page.locator("body")).toContainText("Puzl CowOrKing");
   }
-});
 
-test("keeps the notice motion-free with reduced motion enabled", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/2026/");
-
-  const notice = page.locator('[data-notice-banner][data-variant="sitewide"]');
-  await expect(notice).toBeVisible();
-  expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }))).toHaveLength(0);
-  await expect(page.locator("[data-marquee-notice], [data-marquee-track], [data-marquee-toggle]")).toHaveCount(0);
-});
-
-test("fits the full page notice at 320px without clipping its short copy", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "The smallest-width audit only needs one browser project");
-  await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto("/2026/");
-
-  const notice = page.locator('[data-notice-banner][data-variant="sitewide"]');
-  const message = notice.locator(".notice-banner__message");
-  const box = await notice.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box!.x).toBeCloseTo(0, 0);
-  expect(box!.width).toBeCloseTo(320, 0);
-  expect(box!.height).toBeLessThanOrEqual(60);
-  const defaultMetrics = await message.evaluate((element) => ({
-    clientHeight: element.clientHeight,
-    clientWidth: element.clientWidth,
-    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
-    scrollHeight: element.scrollHeight,
-    scrollWidth: element.scrollWidth
-  }));
-  expect(defaultMetrics.scrollWidth).toBeLessThanOrEqual(defaultMetrics.clientWidth);
-  expect(defaultMetrics.scrollHeight).toBeLessThanOrEqual(defaultMetrics.clientHeight);
-  expect(defaultMetrics.clientHeight).toBeLessThanOrEqual(defaultMetrics.lineHeight + 1);
-
-  await page.evaluate(() => {
-    for (const sheet of document.styleSheets) {
-      try {
-        sheet.insertRule("html { font-size: 200% !important; }", sheet.cssRules.length);
-        return;
-      } catch {}
-    }
-    throw new Error("Unable to apply the text-sizing audit rule");
-  });
-
-  const enlargedMetrics = await message.evaluate((element) => ({
-    clientHeight: element.clientHeight,
-    clientWidth: element.clientWidth,
-    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
-    scrollHeight: element.scrollHeight,
-    scrollWidth: element.scrollWidth
-  }));
-  expect(enlargedMetrics.scrollWidth).toBeLessThanOrEqual(enlargedMetrics.clientWidth);
-  expect(enlargedMetrics.scrollHeight).toBeLessThanOrEqual(enlargedMetrics.clientHeight);
-  expect(enlargedMetrics.clientHeight).toBeGreaterThan(enlargedMetrics.lineHeight);
-  const enlargedNoticeMetrics = await notice.evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth
-  }));
-  expect(enlargedNoticeMetrics.scrollWidth).toBeLessThanOrEqual(enlargedNoticeMetrics.clientWidth);
+  await page.goto("/2026/events/project-kickoff/");
+  await expect(page.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
+    "href",
+    "https://luma.com/9b5mxujb"
+  );
+  await expect(page.locator("body")).not.toContainText("Genesys Hungary office");
+  await expect(page.locator('a[href="https://maps.app.goo.gl/4Qk2mNq2eZ7592NPA"]')).toHaveCount(0);
 });
 
 test("skips same-page anchors when using the detail page's top back link", async ({ page }) => {
@@ -368,11 +261,11 @@ test("publishes the isolated 2026 event routes", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/2026\/events\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
-  await expect(page.locator(".event-grid-card")).toHaveAttribute("data-event-status", "postponed");
+  await expect(page.locator(".event-grid-card")).toHaveAttribute("data-event-status", "scheduled");
   await expect(page.locator(".event-grid-card__topline > :last-child")).toHaveText(
-    "Postponed · New date to be announced"
+    "Scheduled · 13 August 2026"
   );
-  await expect(page.locator(".event-grid-card time")).toHaveCount(0);
+  await expect(page.locator(".event-grid-card time")).toHaveText("13 August 2026");
   expect(await page.locator(".event-grid-card__link").evaluateAll((links) =>
     links.map((link) => link.getAttribute("href"))
   )).toEqual(["/2026/events/project-kickoff/"]);
@@ -410,32 +303,31 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/project-kickoff\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Project Kickoff");
   const facts = page.locator(".event-document__facts");
-  await expect(page.locator(".event-document__hero-copy .eyebrow")).toContainText("Postponed");
-  await expect(facts).toContainText("New date to be announced");
-  await expect(facts).toContainText("New time to be announced");
-  await expect(facts).toContainText("New Budapest venue to be announced");
+  await expect(page.locator(".event-document__hero-copy .eyebrow")).toContainText("Scheduled");
+  await expect(facts).toContainText("13 August 2026");
+  await expect(facts).toContainText("18:00–21:00");
+  await expect(facts).toContainText("Puzl CowOrKing, Budapest");
   await expect(facts).toContainText("Mobile development · Idea development · Mentoring");
-  await expect(facts).toContainText("Paused until the new date and venue are confirmed");
-  await expect(facts.getByRole("link")).toHaveCount(0);
-  await expect(page.locator(".event-document__resources")).toHaveCount(0);
-  // The former venue's gallery is intentionally absent; add new gallery coverage with the next confirmed venue.
-  await expect(page.locator("[data-venue-gallery], [data-venue-dialog]")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Planned schedule", exact: true })).toBeVisible();
-  await expect(page.locator(".event-schedule__status")).toHaveText(
-    "The session plan remains provisional; every time will be reconfirmed with the new date and venue."
+  await expect(facts.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
+    "href",
+    "https://luma.com/9b5mxujb"
   );
+  await expect(page.locator(".event-document__resources")).toHaveCount(0);
+  // Venue photos can be added once current Puzl imagery is available.
+  await expect(page.locator("[data-venue-gallery], [data-venue-dialog]")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
+  await expect(page.locator(".event-schedule__status")).toHaveCount(0);
   await expect(page.locator(".event-schedule > ol > li")).toHaveCount(7);
   await expect(page.locator(".event-schedule__index")).toHaveCount(0);
   await expect(page.locator(".event-schedule__time")).toHaveText([
-    "01",
-    "02",
-    "03",
-    "04",
-    "05",
-    "06",
-    "07"
+    "18:00",
+    "18:20",
+    "18:30",
+    "19:05",
+    "19:15",
+    "19:25",
+    "20:50"
   ]);
-  await expect(page.locator(".event-schedule")).not.toContainText(/17:00|17:20|17:30|18:25|18:40|19:10|20:45/);
   const scheduleEmojis = page.locator('.event-schedule h3 > span[aria-hidden="true"]');
   await expect(scheduleEmojis).toHaveText(["👋", "🚀", "🎤", "☕", "🎲", "🛠️", "🤝"]);
   await expect(page.getByRole("heading", { name: "Arrival and registration", exact: true })).toBeVisible();
@@ -607,7 +499,7 @@ test("keeps page motion directional and stable from a scrolled route", async ({ 
     );
   });
   await page
-    .locator('[data-event-card][data-date="2026-08-04"]')
+    .locator('[data-event-card][data-date="2026-08-13"]')
     .getByRole("link", { name: "View event details" })
     .evaluate((link) => (link as HTMLAnchorElement).click());
 
@@ -673,17 +565,17 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
   await expect(page.locator(".event-document__copy-link")).not.toHaveCount(0);
   await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(0);
-  await expect(page.locator(".event-document__header [data-notice-banner]")).toHaveCount(1);
+  await expect(page.locator(".event-document__header [data-notice-banner]")).toHaveCount(0);
 
   await page.getByRole("link", { name: "Shipaton Budapest home" }).click();
   await expect(page).toHaveURL(/\/2026\/$/);
   expect(
     await page.evaluate(() => (window as Window & { __shipatonDocumentMarker?: string }).__shipatonDocumentMarker)
   ).toBe("alive");
-  await expect(page.locator('[data-event-card][aria-current="true"]')).toHaveAttribute("data-date", "2026-08-04");
+  await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-13");
   await expect(page.locator(".event-controls")).toBeVisible();
   await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
-  await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(1);
+  await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(0);
 });
 
 test("keeps the event detail body aligned with a responsive table of contents", async ({ page }) => {
@@ -691,7 +583,7 @@ test("keeps the event detail body aligned with a responsive table of contents", 
 
   const aboutHeading = page.getByRole("heading", { name: "About this event", exact: true });
   const title = page.getByRole("heading", { name: "Project Kickoff", exact: true });
-  const scheduleHeading = page.getByRole("heading", { name: "Planned schedule", exact: true });
+  const scheduleHeading = page.getByRole("heading", { name: "Schedule", exact: true });
   const body = page.locator(".event-document__body");
   const toc = page.getByRole("navigation", { name: "On this page" });
   const intro = body.locator("> p").first();
@@ -879,7 +771,7 @@ test("selects and extrudes the event without changing its layout footprint", asy
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/2026/");
 
-  const card = page.locator('[data-event-card][data-date="2026-08-04"]');
+  const card = page.locator('[data-event-card][data-date="2026-08-13"]');
   const before = await card.evaluate((element) => ({
     offsetHeight: (element as HTMLElement).offsetHeight,
     offsetLeft: (element as HTMLElement).offsetLeft,
@@ -917,7 +809,7 @@ test("gives clickable backdrops the right hover color", async ({ page }, testInf
 
   for (const { backdrop, color } of [
     {
-      backdrop: page.getByRole("link", { name: "See the event update" }).locator(".button--primary"),
+      backdrop: page.getByRole("link", { name: "See the event schedule" }).locator(".button--primary"),
       color: "rgb(23, 19, 38)"
     },
     {
@@ -956,7 +848,7 @@ test("gives clickable backdrops the right hover color", async ({ page }, testInf
   await expect(heroCaption).toHaveCSS("background-color", "rgb(23, 19, 38)");
   await expect(heroCaption.locator("[data-featured-title]")).toHaveCSS("color", "rgb(255, 129, 0)");
 
-  const primary = page.getByRole("link", { name: "See the event update" });
+  const primary = page.getByRole("link", { name: "See the event schedule" });
   await page.mouse.move(0, 0);
   const primaryBox = await primary.boundingBox();
   expect(primaryBox).not.toBeNull();
