@@ -54,7 +54,9 @@ test("opens on the scheduled event without redundant navigation", async ({ page 
   await expect(event).toHaveAttribute("data-state", "upcoming");
   await expect(event.locator("[data-event-state]")).toHaveText("Upcoming");
   await expect(event.locator("time")).toHaveText("13 August 2026");
-  await expect(event.locator('[data-event-people="organizers"]')).toContainText("Balázs Püspök-Kiss");
+  const cardOrganizers = event.locator('[data-event-people="organizers"]');
+  await expect(cardOrganizers.locator("li")).toHaveCount(1);
+  await expect(cardOrganizers).toContainText("Balázs Püspök-Kiss");
   await expect(event.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
     "Gábor Bóka",
@@ -288,7 +290,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
   await expect(page.locator(".event-grid-card")).toHaveCount(1);
   await expect(page.locator(".event-grid-card__link")).toHaveCount(1);
-  await expect(page.locator('.event-grid-card [data-event-people="organizers"]')).toContainText("Balázs Püspök-Kiss");
+  const gridOrganizers = page.locator('.event-grid-card [data-event-people="organizers"]');
+  await expect(gridOrganizers.locator("li")).toHaveCount(1);
+  await expect(gridOrganizers).toContainText("Balázs Püspök-Kiss");
   const listedSpeakers = page.locator('.event-grid-card [data-event-people="speakers"]');
   await expect(listedSpeakers.locator("li")).toContainText([
     "Márton Braun",
@@ -425,15 +429,9 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(team.locator("dt")).toHaveText(["Organizers", "Speakers"]);
   await expect(team.locator('[data-event-people="hosts"]')).toHaveCount(0);
   const organizerLinks = team.locator('[data-event-people="organizers"] a');
-  await expect(organizerLinks).toHaveText([
-    "Balázs Püspök-Kiss ↗ (opens in a new tab)",
-    "Tamás Fábián ↗ (opens in a new tab)",
-    "Petra Szász-Perjési ↗ (opens in a new tab)"
-  ]);
+  await expect(organizerLinks).toHaveText(["Balázs Püspök-Kiss ↗ (opens in a new tab)"]);
   expect(await organizerLinks.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual([
-    "https://www.linkedin.com/in/balazs-puspok-kiss",
-    "https://www.linkedin.com/in/tamas--fabian/",
-    "https://www.linkedin.com/in/szpetra/"
+    "https://www.linkedin.com/in/balazs-puspok-kiss"
   ]);
   await expect(team.locator('[data-event-people="speakers"] li')).toContainText([
     "Márton Braun",
