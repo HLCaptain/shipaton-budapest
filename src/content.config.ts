@@ -22,6 +22,18 @@ const eventNotice = z.object({
   sitewide: z.boolean().default(false)
 });
 
+const presentationUrl = z.union([
+  z.url(),
+  z.string().regex(/^\/2026\//, "Local presentation URLs must stay within the 2026 edition")
+]);
+
+const presentation = z.object({
+  title: z.string().min(1),
+  speaker: z.string().min(1),
+  url: presentationUrl,
+  format: z.string().min(1)
+});
+
 const events2026 = defineCollection({
   loader: glob({ base: "./src/content/events/2026", pattern: "[^_]*.{md,mdx}" }),
   schema: z.object({
@@ -55,7 +67,7 @@ const events2026 = defineCollection({
     hosts: z.array(person).min(1).optional(),
     organizers: z.array(person).min(1).optional(),
     speakers: z.array(person).min(1).optional(),
-    presentation: z.string().optional(),
+    presentations: z.array(presentation).min(1).optional(),
     attachment: z.string().optional()
   })
 });

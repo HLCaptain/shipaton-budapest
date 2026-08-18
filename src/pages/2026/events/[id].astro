@@ -4,6 +4,7 @@ import { getCollection, render } from "astro:content";
 import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
 import NoticeBanner from "../../../editions/2026/components/NoticeBanner.astro";
 import PersonList from "../../../editions/2026/components/PersonList.astro";
+import PresentationList from "../../../editions/2026/components/PresentationList.astro";
 import SectionHeading from "../../../editions/2026/components/SectionHeading.astro";
 import {
   formatEventDateLabel,
@@ -28,6 +29,7 @@ const { Content, headings } = await render(event);
 const hosts = data.hosts ?? [];
 const organizers = data.organizers ?? [];
 const speakers = data.speakers ?? [];
+const presentations = data.presentations ?? [];
 const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const thumbnail = data.thumbnail;
@@ -109,14 +111,18 @@ const rsvp = postponed ? undefined : data.rsvp;
       <ul class="tag-list event-document__tags" aria-label="Event tags">
         {data.tags.map((tag) => <li>{tag}</li>)}
       </ul>
-      {(rsvp || data.presentation || data.attachment) && (
+      {(rsvp || presentations.length > 0 || data.attachment) && (
         <nav class="event-document__resources" aria-label="Event resources">
           {rsvp && (
             <ButtonLink href={rsvp} rel="noreferrer" variant="primary">
               RSVP <span aria-hidden="true">↗</span>
             </ButtonLink>
           )}
-          {data.presentation && <ButtonLink href={data.presentation}>Open presentation <span aria-hidden="true">↗</span></ButtonLink>}
+          {presentations.length > 0 && (
+            <ButtonLink href="#presentations-title">
+              View presentations <span aria-hidden="true">↓</span>
+            </ButtonLink>
+          )}
           {data.attachment && <ButtonLink href={data.attachment}>Open attachment <span aria-hidden="true">↗</span></ButtonLink>}
         </nav>
       )}
@@ -237,6 +243,16 @@ const rsvp = postponed ? undefined : data.rsvp;
         ))}
       </ol>
     </section>
+
+    {presentations.length > 0 && (
+      <section class="event-presentations" aria-labelledby="presentations-title">
+        <SectionHeading eyebrow="Revisit the talks" id="presentations-title" title="Presentations" />
+        <p class="event-presentations__lede">
+          Open the talk materials from this event. Each presentation opens in a new tab.
+        </p>
+        <PresentationList presentations={presentations} />
+      </section>
+    )}
 
     {hasPeople && (
       <section class="event-people" aria-labelledby="people-title">

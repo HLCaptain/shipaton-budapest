@@ -497,7 +497,7 @@ svg {
   }
 }
 
-:where(.button--primary, .hero__art, .event-card, .event-grid-card, .event-venue__thumbnail) {
+:where(.button--primary, .hero__art, .event-card, .event-grid-card, .event-venue__thumbnail, .event-presentation-card) {
   --extrusion-color: var(--space);
   --extrusion-factor: clamp(0.35rem, 0.75vw, 0.5rem);
   --extrusion-shadow:
@@ -1653,6 +1653,7 @@ body:has(.venue-preview[open]) {
 
 .event-venue,
 .event-schedule,
+.event-presentations,
 .event-people,
 .event-about {
   margin-top: clamp(3rem, 6vw, 5rem);
@@ -1668,6 +1669,7 @@ body:has(.venue-preview[open]) {
 
 .event-section-heading h2 {
   margin: 0;
+  scroll-margin-top: 1.5rem;
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   letter-spacing: -0.05em;
   line-height: 0.95;
@@ -1747,6 +1749,99 @@ body:has(.venue-preview[open]) {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.6;
+}
+
+.event-presentations__lede {
+  max-width: 48rem;
+  margin: -0.25rem 0 1.5rem;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.event-presentations__grid {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  list-style: none;
+}
+
+.event-presentations__grid > li {
+  min-width: 0;
+}
+
+.event-presentation-card {
+  --extrusion-color: var(--orange);
+  display: flex;
+  height: 100%;
+  min-height: 18rem;
+  padding: 1.25rem;
+  flex-direction: column;
+  border: 2px solid var(--space);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, translate 180ms ease;
+}
+
+.event-presentation-card__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--orange-dark);
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.event-presentation-card__topline > :last-child {
+  color: var(--muted);
+  text-align: right;
+}
+
+.event-presentation-card h3 {
+  margin: clamp(2rem, 4vw, 3rem) 0 0;
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+}
+
+.event-presentation-card p {
+  margin: 1rem 0 2rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.event-presentation-card p strong {
+  color: var(--ink-soft);
+  font-weight: 800;
+}
+
+.event-presentation-card__cta {
+  margin-top: auto;
+  color: var(--orange-dark);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+@media (hover: hover) {
+  .event-presentation-card:hover {
+    border-color: var(--orange);
+    box-shadow: var(--extrusion-shadow);
+    translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
+  }
+}
+
+.event-presentation-card:focus-visible {
+  border-color: var(--orange);
+  box-shadow: var(--extrusion-shadow);
+  outline-color: var(--orange);
+  translate: calc(-1 * var(--extrusion-factor)) calc(-1 * var(--extrusion-factor));
 }
 
 .event-people__groups {

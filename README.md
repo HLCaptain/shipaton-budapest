@@ -26,7 +26,7 @@ The Playwright suite runs at mobile, tablet, and desktop sizes. It fixes the bro
 
 Add or edit a flat, lowercase kebab-case entry in `src/content/events/2026/`; the edition sorts entries by date and selects the first event on or after the current Budapest date. Copy `_template.mdx` there for the complete field list.
 
-Every entry appears on `/2026/events/` and publishes at `/2026/events/<filename>/`. Frontmatter drives the shared facts, tags, schedule, optional RSVP, location, hosts, organizers, speakers, presentation, and attachments; the MDX body holds the welcoming description and goals. People can include an optional role and external `url`. Put uploaded files under `public/2026/documents/`.
+Every entry appears on `/2026/events/` and publishes at `/2026/events/<filename>/`. Frontmatter drives the shared facts, tags, schedule, optional RSVP, location, hosts, organizers, speakers, presentations, and attachments; the MDX body holds the welcoming description and goals. People can include an optional role and external `url`. Put uploaded files under `public/2026/documents/`.
 
 The 2026 design is frozen under `src/editions/2026/`, with authored assets and scripts under `public/2026/`. A future edition should get its own page, content, edition, and public directories so rebuilding it cannot change earlier designs. Deployment-wide redirects, headers, and robots rules remain at the root of `public/`.
 

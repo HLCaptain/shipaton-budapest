@@ -325,6 +325,46 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
     "href",
     "https://luma.com/9b5mxujb"
   );
+  await expect(resources.getByRole("link", { name: "View presentations" })).toHaveAttribute(
+    "href",
+    "#presentations-title"
+  );
+  const presentations = page.getByRole("region", { name: "Presentations" });
+  const presentationLinks = presentations.locator("[data-event-presentations] > li > a");
+  await expect(presentations.getByRole("heading", { level: 3 })).toHaveText([
+    "Fast mobile project initialization and shipping",
+    "Kotlin Multiplatform & Compose Multiplatform",
+    "Comprehension debt & cognitive surrender"
+  ]);
+  await expect(presentationLinks).toHaveCount(3);
+  expect(await presentationLinks.evaluateAll((links) => links.map((link) => link.getAttribute("href")))).toEqual([
+    "https://drive.google.com/file/d/1OUCBhfaKRQWtjg6wdbTZWLAgNmx_Pl2b/view?usp=drivesdk",
+    "/2026/documents/marton-braun-kotlin-multiplatform-compose-multiplatform.pdf",
+    "/2026/documents/gabor-boka-comprehension-debt.pdf"
+  ]);
+  for (const href of [
+    "/2026/documents/marton-braun-kotlin-multiplatform-compose-multiplatform.pdf",
+    "/2026/documents/gabor-boka-comprehension-debt.pdf"
+  ]) {
+    const response = await page.request.head(href);
+    expect(response.ok()).toBe(true);
+    expect(response.headers()["content-type"]).toContain("application/pdf");
+  }
+  for (const link of await presentationLinks.all()) {
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /\bnoopener\b/);
+    await expect(link).toHaveAttribute("rel", /\bnoreferrer\b/);
+  }
+  const presentationLayout = await presentations.locator("[data-event-presentations]").evaluate((grid) => ({
+    cardOverflow: [...grid.querySelectorAll<HTMLElement>(".event-presentation-card")]
+      .some((card) => card.scrollWidth > card.clientWidth),
+    columns: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+    gridOverflow: grid.scrollWidth > grid.clientWidth
+  }));
+  const viewportWidth = page.viewportSize()!.width;
+  expect(presentationLayout.columns).toBe(viewportWidth >= 1000 ? 3 : viewportWidth >= 600 ? 2 : 1);
+  expect(presentationLayout.cardOverflow).toBe(false);
+  expect(presentationLayout.gridOverflow).toBe(false);
   await expect(page.locator("[data-venue-gallery]")).toHaveCount(1);
   await expect(page.locator("[data-venue-dialog]")).toHaveCount(1);
   await expect(page.getByRole("list", { name: "Venue photos" }).getByRole("button")).toHaveCount(3);

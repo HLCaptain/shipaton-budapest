@@ -1,0 +1,38 @@
+---
+type Presentation = {
+  title: string;
+  speaker: string;
+  url: string;
+  format: string;
+};
+
+type Props = {
+  presentations: Presentation[];
+};
+
+const { presentations } = Astro.props;
+---
+
+<ul class="event-presentations__grid" role="list" data-event-presentations>
+  {presentations.map((presentation, index) => (
+    <li>
+      <a
+        class="event-presentation-card"
+        href={presentation.url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span class="event-presentation-card__topline">
+          <span>Talk {String(index + 1).padStart(2, "0")}</span>
+          <span>{presentation.format}</span>
+        </span>
+        <h3>{presentation.title}</h3>
+        <p>Presented by <strong>{presentation.speaker}</strong></p>
+        <span class="event-presentation-card__cta">
+          Open presentation <span aria-hidden="true">↗</span>
+          <span class="visually-hidden"> (opens in a new tab)</span>
+        </span>
+      </a>
+    </li>
+  ))}
+</ul>
