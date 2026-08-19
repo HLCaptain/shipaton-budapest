@@ -23,8 +23,11 @@ const eventNotice = z.object({
 });
 
 const presentationUrl = z.union([
-  z.url(),
-  z.string().regex(/^\/2026\//, "Local presentation URLs must stay within the 2026 edition")
+  z.url().regex(/^https:\/\//i, "Remote presentation URLs must use HTTPS"),
+  z.string().regex(
+    /^\/2026\/documents\/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$/,
+    "Local presentation URLs must use a kebab-case PDF under /2026/documents/"
+  )
 ]);
 
 const presentation = z.object({
