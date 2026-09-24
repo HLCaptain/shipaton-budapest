@@ -46,8 +46,8 @@ test("opens on the scheduled event without redundant navigation", async ({ page 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Move your app forward");
   const event = page.locator('[data-event-card][data-date="2026-08-13"]');
   const teaser = page.locator("[data-event-teaser]");
-  await expect(page.locator("[data-event-rail-card]")).toHaveCount(2);
-  await expect(page.locator("[data-event-card]")).toHaveCount(1);
+  await expect(page.locator("[data-event-rail-card]")).toHaveCount(3);
+  await expect(page.locator("[data-event-card]")).toHaveCount(2);
   await expect(teaser).toBeVisible();
   await expect(event).toHaveAttribute("aria-current", "date");
   await expect(event).toHaveAttribute("data-status", "scheduled");
@@ -67,7 +67,7 @@ test("opens on the scheduled event without redundant navigation", async ({ page 
   await expect(event).toHaveAttribute("tabindex", "0");
   await expect(event).toHaveCSS("cursor", "pointer");
   await expect(page.locator(".event-controls")).toBeVisible();
-  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
+  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 3");
   const ctaLayout = await event.getByRole("link", { name: "View event details" }).evaluate((link) => {
     const card = link.closest<HTMLElement>("[data-event-card]")!;
     const cardBox = card.getBoundingClientRect();
@@ -110,7 +110,7 @@ test("uses smooth centering after an interrupted event-card drag", async ({ page
     const target = Math.max(0, Math.min(left, element.scrollWidth - element.clientWidth));
     element.scrollLeft = target - 200;
   });
-  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
+  await expect(page.locator("[data-event-counter]")).toHaveText("3 / 3");
 
   await track.evaluate((element) => {
     const state = window as Window & { __eventRailScroll?: { behavior?: ScrollBehavior } };
@@ -157,13 +157,14 @@ test("removes the potential event at the competition deadline", async ({ page })
   await page.clock.setFixedTime("2026-10-01T06:45:00Z");
   await page.goto("/2026/");
 
-  const event = page.locator('[data-event-card][data-date="2026-08-13"]');
+  const event = page.locator('[data-event-card][data-date="2026-10-13"]');
   await expect(page.locator("[data-event-teaser]")).toHaveCount(0);
-  await expect(page.locator("[data-event-rail-card]")).toHaveCount(1);
-  await expect(page.locator(".event-controls")).toBeHidden();
-  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 1");
-  await expect(event).not.toHaveAttribute("tabindex");
-  await expect(event).toHaveCSS("cursor", "default");
+  await expect(page.locator("[data-event-rail-card]")).toHaveCount(2);
+  await expect(page.locator(".event-controls")).toBeVisible();
+  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 2");
+  await expect(event).toHaveAttribute("aria-current", "date");
+  await expect(event).toHaveAttribute("tabindex", "0");
+  await expect(event).toHaveCSS("cursor", "pointer");
 });
 
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
@@ -203,6 +204,82 @@ test("links the hero art to the scheduled Budapest event", async ({ page }) => {
   await expect(heroLink.locator("[data-featured-title]")).toHaveText("Project Kickoff");
   await expect(heroLink.locator("[data-featured-location]")).toHaveText("Puzl CowOrKing · Budapest");
   await expect(page.locator(".hero__lede")).not.toContainText(/\bfour\b/i);
+});
+
+test("features the wrap-up and publishes its agenda, RSVP and venue previews", async ({ page }) => {
+  await page.clock.setFixedTime("2026-09-24T10:00:00+02:00");
+  await page.goto("/2026/");
+
+  const title = "Kotlin Turns 15 × Shipaton Wrap-up";
+  const path = "/2026/events/wrap-up/";
+  const hero = page.getByRole("link", { name: `View ${title} event details` });
+  await expect(hero).toHaveAttribute("href", path);
+  await expect(hero.locator("[data-featured-title]")).toHaveText(title);
+  const card = page.locator('[data-event-card][data-date="2026-10-13"]');
+  await expect(card).toHaveAttribute("aria-current", "date");
+  await expect(card).toHaveAttribute("data-state", "upcoming");
+  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 3");
+  const details = card.getByRole("link", { name: "View event details" });
+  await expect(details).toHaveAttribute("href", path);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await details.click();
+
+  await expect(page).toHaveURL(/\/2026\/events\/wrap-up\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+  const facts = page.locator(".event-document__facts");
+  await expect(facts).toContainText("13 October 2026");
+  await expect(facts).toContainText("17:30–20:30");
+  await expect(facts).toContainText("Genesys Hungary");
+  await expect(facts.getByRole("link", { name: /Genesys Hungary/ })).toHaveAttribute(
+    "href", "https://maps.app.goo.gl/txyWYX2hDED4bRi27"
+  );
+  await expect(facts.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
+    "href", "https://luma.com/a10znagr"
+  );
+  await expect(page.getByRole("navigation", { name: "Event resources" }).getByRole("link", { name: "RSVP" }))
+    .toHaveAttribute("href", "https://luma.com/a10znagr");
+  const body = page.locator(".event-document__body");
+  await expect(body.getByRole("link", { name: "RSVP on Luma" })).toHaveAttribute("href", "https://luma.com/a10znagr");
+  await expect(body.getByRole("link", { name: "Meetup", exact: true })).toHaveAttribute(
+    "href", "https://www.meetup.com/kotlin-budapest/events/316663708/"
+  );
+  await expect(page.locator(".event-schedule__time")).toHaveText([
+    "17:30", "18:00", "18:15", "18:55", "19:15", "20:00"
+  ]);
+  await expect(page.locator('.event-people__groups [data-event-people="hosts"] li')).toContainText([
+    "Petra Szász-Perjési", "Tamás Fábián", "Balázs Püspök-Kiss"
+  ]);
+  expect(await page.locator('.event-people__groups [data-event-people="hosts"] a').evaluateAll(
+    (links) => links.map((link) => link.getAttribute("href"))
+  )).toEqual([
+    "https://www.linkedin.com/in/szpetra/",
+    "https://www.linkedin.com/in/tamas--fabian/",
+    "https://www.linkedin.com/in/balazs-puspok-kiss/"
+  ]);
+  await expect(page.locator(".event-document__body")).toContainText("Event language: English");
+  await expect(page.locator(".event-document__body")).toContainText("Europe/Budapest");
+
+  const thumbnail = page.locator(".event-document__thumbnail");
+  await expect(thumbnail).toHaveAttribute("src", "/2026/events/wrap-up-thumbnail.webp");
+  await expect.poll(() => thumbnail.evaluate((image: HTMLImageElement) => (
+    image.complete && image.naturalWidth > 0 && image.naturalWidth === image.naturalHeight
+  ))).toBe(true);
+  const thumbnailBox = (await thumbnail.boundingBox())!;
+  expect(Math.abs(thumbnailBox.width - thumbnailBox.height)).toBeLessThan(1);
+  const venueImages = page.getByRole("list", { name: "Venue photos" }).getByRole("img");
+  await expect(venueImages).toHaveCount(3);
+  expect(await venueImages.evaluateAll((images) => images.map((image) => image.getAttribute("src")))).toEqual([
+    "/2026/events/project-kickoff-venue-main-room.webp",
+    "/2026/events/project-kickoff-venue-workspace.webp",
+    "/2026/events/project-kickoff-venue-terrace.webp"
+  ]);
+  for (const image of await venueImages.all()) {
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((element: HTMLImageElement) => (
+      element.complete && element.naturalWidth > 0
+    ))).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
 
 test("removes the obsolete postponement notice from every event surface", async ({ page }) => {
@@ -263,14 +340,14 @@ test("publishes the isolated 2026 event routes", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/2026\/events\/$/);
   await expect(page.locator("html")).toHaveAttribute("data-edition", "2026");
-  await expect(page.locator(".event-grid-card")).toHaveAttribute("data-event-status", "scheduled");
-  await expect(page.locator(".event-grid-card__topline > :last-child")).toHaveText(
-    "Scheduled · 13 August 2026"
-  );
-  await expect(page.locator(".event-grid-card time")).toHaveText("13 August 2026");
+  await expect(page.locator('.event-grid-card[data-event-status="scheduled"]')).toHaveCount(2);
+  await expect(page.locator(".event-grid-card__topline > :last-child")).toHaveText([
+    "Scheduled · 13 August 2026", "Scheduled · 13 October 2026"
+  ]);
+  await expect(page.locator(".event-grid-card time")).toHaveText(["13 August 2026", "13 October 2026"]);
   expect(await page.locator(".event-grid-card__link").evaluateAll((links) =>
     links.map((link) => link.getAttribute("href"))
-  )).toEqual(["/2026/events/project-kickoff/"]);
+  )).toEqual(["/2026/events/project-kickoff/", "/2026/events/wrap-up/"]);
   expect(new URL((await page.locator('link[rel="canonical"]').getAttribute("href"))!).pathname).toBe("/2026/events/");
   await expect(page.locator('a[href^="/events/"]')).toHaveCount(0);
 
@@ -353,18 +430,21 @@ test("navigates from the event grid to MDX details and back", async ({ page }) =
   await expect(page).toHaveURL(/\/2026\/events\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Meet. Make.");
   await expect(page.locator(".event-grid")).toHaveCSS("display", "grid");
-  await expect(page.locator(".event-grid-card")).toHaveCount(1);
-  await expect(page.locator(".event-grid-card__link")).toHaveCount(1);
-  const gridOrganizers = page.locator('.event-grid-card [data-event-people="organizers"]');
+  await expect(page.locator(".event-grid-card")).toHaveCount(2);
+  await expect(page.locator(".event-grid-card__link")).toHaveCount(2);
+  const kickoff = page.locator(".event-grid-card").filter({
+    has: page.getByRole("link", { name: "Project Kickoff", exact: true })
+  });
+  const gridOrganizers = kickoff.locator('[data-event-people="organizers"]');
   await expect(gridOrganizers.locator("li")).toHaveCount(1);
   await expect(gridOrganizers).toContainText("Balázs Püspök-Kiss");
-  const listedSpeakers = page.locator('.event-grid-card [data-event-people="speakers"]');
+  const listedSpeakers = kickoff.locator('[data-event-people="speakers"]');
   await expect(listedSpeakers.locator("li")).toContainText([
     "Márton Braun",
     "Gábor Bóka",
     "Mirzamehdi Karimov"
   ]);
-  if (page.viewportSize()!.width > 620) await expect(listedSpeakers).toBeVisible();
+  if (page.viewportSize()!.width > 940) await expect(listedSpeakers).toBeVisible();
   else await expect(listedSpeakers).toBeHidden();
   await expect(page.locator("a a")).toHaveCount(0);
   await page.locator(".event-grid-card").getByRole("link", { name: "Project Kickoff", exact: true }).click();
@@ -706,7 +786,7 @@ test("reinitializes page features across repeated client-side visits", async ({ 
   ).toBe("alive");
   await expect(page.locator('[data-event-card][aria-current="date"]')).toHaveAttribute("data-date", "2026-08-13");
   await expect(page.locator(".event-controls")).toBeVisible();
-  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 2");
+  await expect(page.locator("[data-event-counter]")).toHaveText("1 / 3");
   await expect(page.locator('[data-notice-banner][data-variant="sitewide"]')).toHaveCount(0);
 });
 
