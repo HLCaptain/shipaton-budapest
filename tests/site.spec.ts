@@ -230,16 +230,31 @@ test("features the wrap-up and publishes its agenda, RSVP and venue previews", a
   await expect(facts).toContainText("13 October 2026");
   await expect(facts).toContainText("17:30–20:30");
   await expect(facts).toContainText("Genesys Hungary");
+  await expect(facts.getByRole("link", { name: /Genesys Hungary/ })).toHaveAttribute(
+    "href", "https://maps.app.goo.gl/txyWYX2hDED4bRi27"
+  );
   await expect(facts.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
-    "href", "https://www.meetup.com/kotlin-budapest/events/316663708/"
+    "href", "https://luma.com/a10znagr"
   );
   await expect(page.getByRole("navigation", { name: "Event resources" }).getByRole("link", { name: "RSVP" }))
-    .toHaveAttribute("href", "https://www.meetup.com/kotlin-budapest/events/316663708/");
+    .toHaveAttribute("href", "https://luma.com/a10znagr");
+  const body = page.locator(".event-document__body");
+  await expect(body.getByRole("link", { name: "RSVP on Luma" })).toHaveAttribute("href", "https://luma.com/a10znagr");
+  await expect(body.getByRole("link", { name: "Meetup", exact: true })).toHaveAttribute(
+    "href", "https://www.meetup.com/kotlin-budapest/events/316663708/"
+  );
   await expect(page.locator(".event-schedule__time")).toHaveText([
     "17:30", "18:00", "18:15", "18:55", "19:15", "20:00"
   ]);
   await expect(page.locator('.event-people__groups [data-event-people="hosts"] li')).toContainText([
     "Petra Szász-Perjési", "Tamás Fábián", "Balázs Püspök-Kiss"
+  ]);
+  expect(await page.locator('.event-people__groups [data-event-people="hosts"] a').evaluateAll(
+    (links) => links.map((link) => link.getAttribute("href"))
+  )).toEqual([
+    "https://www.linkedin.com/in/szpetra/",
+    "https://www.linkedin.com/in/tamas--fabian/",
+    "https://www.linkedin.com/in/balazs-puspok-kiss/"
   ]);
   await expect(page.locator(".event-document__body")).toContainText("Event language: English");
   await expect(page.locator(".event-document__body")).toContainText("Europe/Budapest");
