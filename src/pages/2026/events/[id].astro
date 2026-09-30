@@ -1,6 +1,7 @@
 ---
-import type { CollectionEntry } from "astro:content";
-import { getCollection, render } from "astro:content";
+import { render } from "astro:content";
+import { edition } from "../../../editions/2026/config";
+import { getEvents2026, type ResolvedEvent } from "../../../editions/2026/content";
 import ButtonLink from "../../../editions/2026/components/ButtonLink.astro";
 import NoticeBanner from "../../../editions/2026/components/NoticeBanner.astro";
 import PersonList from "../../../editions/2026/components/PersonList.astro";
@@ -13,36 +14,33 @@ import {
 import BaseLayout from "../../../editions/2026/layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
-  return (await getCollection("events2026")).map((event) => ({
-    params: { id: event.id },
+  return (await getEvents2026()).map((event) => ({
+    params: { id: event.entry.id },
     props: { event }
   }));
 }
 
 type Props = {
-  event: CollectionEntry<"events2026">;
+  event: ResolvedEvent;
 };
 
 const { event } = Astro.props;
 const { data } = event;
-const { Content, headings } = await render(event);
-const hosts = data.hosts ?? [];
-const organizers = data.organizers ?? [];
-const speakers = data.speakers ?? [];
-const presentations = data.presentations ?? [];
+const { Content, headings } = await render(event.entry);
+const { hosts, organizers, speakers, presentations } = data;
 const hasPeople = hosts.length + organizers.length + speakers.length > 0;
 const contentHeadings = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const thumbnail = data.thumbnail;
-const venueImages = data.venueImages ?? [];
+const venueImages = data.venue.images;
 const firstVenueImage = venueImages[0]!;
 const date = formatEventDateLabel(data.date, data.status);
 const postponed = data.status === "postponed";
-const rsvp = postponed ? undefined : data.rsvp;
+const rsvp = postponed ? undefined : data.links.rsvp;
 ---
 
-<BaseLayout title={`${data.title} · Shipaton Budapest`} description={data.description}>
+<BaseLayout title={`${data.title} · ${edition.name}`} description={data.description}>
   <main class="event-document" id="main-content">
-    <ButtonLink class="button--compact event-document__back" href="/2026/" data-history-back>
+    <ButtonLink class="button--compact event-document__back" href={edition.homePath} data-history-back>
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M13 8H3m0 0 4-4M3 8l4 4" />
       </svg>
@@ -88,9 +86,9 @@ const rsvp = postponed ? undefined : data.rsvp;
         <div>
           <dt>Location</dt>
           <dd>
-            {data.locationUrl
-              ? <a href={data.locationUrl} rel="noreferrer">{data.venue} <span aria-hidden="true">↗</span></a>
-              : data.venue}
+            {data.venue.mapsUrl
+              ? <a href={data.venue.mapsUrl} rel="noreferrer">{data.venue.label} <span aria-hidden="true">↗</span></a>
+              : data.venue.label}
           </dd>
         </div>
         <div>
@@ -104,7 +102,7 @@ const rsvp = postponed ? undefined : data.rsvp;
               ? <span>Paused until the new date and venue are confirmed</span>
               : rsvp
               ? <a href={rsvp} rel="noreferrer">Reserve a place <span aria-hidden="true">↗</span></a>
-              : <span>Local registration opens soon · <a href="https://www.shipaton.com/events" rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
+              : <span>Local registration opens soon · <a href={edition.links.events} rel="noreferrer">official listing <span aria-hidden="true">↗</span></a></span>}
           </dd>
         </div>
       </dl>
@@ -283,17 +281,17 @@ const rsvp = postponed ? undefined : data.rsvp;
           </nav>
         )}
         <article class="event-document__body">
-          <Content />
+          <Content event={data} edition={edition} />
         </article>
       </div>
       <p class="visually-hidden" role="status" aria-live="polite" data-heading-copy-status></p>
     </section>
 
-    <ButtonLink class="button--compact event-document__end-link" href="/2026/events/">
+    <ButtonLink class="button--compact event-document__end-link" href={edition.eventsPath}>
       <svg class="button__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M13 8H3m0 0 4-4M3 8l4 4" />
       </svg>
-      Back to 2026 events
+      Back to {edition.year} events
     </ButtonLink>
   </main>
 

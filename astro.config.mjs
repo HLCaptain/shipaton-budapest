@@ -1,17 +1,23 @@
 import mdx from "@astrojs/mdx";
 import { defineConfig } from "astro/config";
-
-const site = process.env.SITE_URL ?? "https://shipaton-budapest.pages.dev";
+import { writeFile } from "node:fs/promises";
+import { redirects, siteUrl } from "./src/site.config.mjs";
 
 export default defineConfig({
-  site,
+  site: siteUrl,
   trailingSlash: "always",
-  redirects: {
-    "/": "/2026/",
-    "/events": "/2026/events/",
-    "/events/project-kickoff": "/2026/events/project-kickoff/"
-  },
-  integrations: [mdx()],
+  redirects,
+  integrations: [mdx(), {
+    name: "cloudflare-redirects",
+    hooks: {
+      "astro:build:done": ({ dir }) => writeFile(
+        new URL("_redirects", dir),
+        Object.entries(redirects)
+          .map(([source, { destination, status }]) => `${source} ${destination} ${status}\n`)
+          .join("")
+      )
+    }
+  }],
   build: {
     inlineStylesheets: "never"
   }

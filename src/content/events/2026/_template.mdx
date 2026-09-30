@@ -13,22 +13,29 @@ title: "Event title"
 format: "Verb · verb · verb"
 description: "Short card description."
 time: "18:00–20:00"
-venue: "Venue · Budapest"
-# Optional shorter venue label for the home-page hero.
-# heroVenue: "Venue · Budapest"
+# Reuse a venue ID from src/editions/2026/references.ts.
+venue: "genesys-hungary"
+# Or replace the ID with an inline venue for a one-off location:
+# venue:
+#   name: "Venue name"
+#   label: "Venue name · Budapest" # Optional card/detail label; defaults to name.
+#   heroLabel: "Venue" # Optional home-page hero label; defaults to label or name.
+#   mapsUrl: "https://example.com/venue"
+#   building: "Building name"
+#   address: "Street address"
+#   directions: "Entrance and floor details"
+#   images: # Optional; descriptions appear only in the full-size preview.
+#     - src: "/2026/events/event-venue.jpg"
+#       alt: "Concise visual description of the venue photo"
+#       description: "Useful context about how attendees will use this space."
+#       width: 1200
+#       height: 800
 # Thumbnail images must be square and use their intrinsic pixel dimensions.
 # thumbnail:
 #   src: "/2026/events/event-thumbnail.png"
 #   alt: "Concise description of the event poster"
 #   width: 1200
 #   height: 1200
-# Venue image descriptions appear only in the full-size preview.
-# venueImages:
-#   - src: "/2026/events/event-venue.jpg"
-#     alt: "Concise visual description of the venue photo"
-#     description: "Useful context about how attendees will use this space."
-#     width: 1200
-#     height: 800
 themes:
   - "Theme"
 tags:
@@ -42,30 +49,37 @@ schedule:
   - time: "18:30"
     title: "Main session"
     description: "Describe the outcome or activity for this schedule item."
-# rsvp: "https://example.com/rsvp"
-# locationUrl: "https://example.com/venue"
+# links:
+#   rsvp: "https://example.com/rsvp"
+#   meetup: "https://example.com/meetup-event"
+# People use a profile reference with an optional event-specific role,
+# or an inline name, URL, and role. The same forms work in every people group.
 # hosts:
-#   - name: "Host name"
-#     role: "Optional role"
-#     url: "https://example.com/host"
+#   - ref: "balazs-puspok-kiss"
+#     role: "Optional event-specific role"
 # organizers:
-#   - name: "Organizer name"
-#     role: "Optional role"
-#     url: "https://example.com/organizer"
+#   - ref: "shipaton-budapest"
 # speakers:
 #   - name: "Speaker name"
 #     role: "Optional role or topic"
 #     url: "https://example.com/speaker"
+#     urlLabel: "Profile" # Optional label when this profile is the edition contact.
+#     social: # Optional contact links; unavailable links are hidden.
+#       github: "https://github.com/example"
+#       x: "https://x.com/example"
 # Presentation URLs may use HTTPS or point to a kebab-case PDF under /2026/documents/.
 # presentations:
 #   - title: "Presentation title"
-#     speaker: "Speaker name"
+#     speaker:
+#       ref: "marton-braun" # Or use an inline name, URL, and optional role.
 #     url: "/2026/documents/event-presentation.pdf"
 #     format: "PDF · 12 slides"
-attachment: "/2026/documents/event-file.pdf"
+# attachment: "/2026/documents/event-file.pdf"
 ---
 
-<!-- Description style: use a few relevant emojis and bold only the most important attendee information or outcomes. Keep both restrained, and do not apply them to frontmatter or schedule fields outside the dedicated schedule emoji. -->
+{/* Description style: use a few relevant emojis and bold only the most important attendee information or outcomes. Keep both restrained, and do not apply them to frontmatter or schedule fields outside the dedicated schedule emoji. */}
+
+{/* Use native MDX expressions for reusable facts: {props.edition.name}, {props.event.venue.name}, or <a href={props.event.links.rsvp}>RSVP</a>. The page supplies resolved event data; frontmatter itself contains IDs. Import profiles from ../../../editions/2026/references for other shared community names or links. Keep unique narrative and schedule descriptions as authored text. */}
 
 Welcome attendees with a short explanation of who the event is for and what they can expect.
 

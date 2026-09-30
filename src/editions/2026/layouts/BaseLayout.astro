@@ -1,7 +1,9 @@
 ---
 import "../styles/global.css";
 import { ClientRouter } from "astro:transitions";
-import { getCollection } from "astro:content";
+import { edition } from "../config";
+import { getEvents2026 } from "../content";
+import { resolveProfile } from "../resolve";
 import NoticeBanner from "../components/NoticeBanner.astro";
 import { eventPath } from "../events";
 
@@ -12,18 +14,24 @@ type Props = {
 
 const { title, description } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const socialImage = new URL("/2026/brand/shipaton-budapest-social-card.png", Astro.site);
-const socialImageAlt = "Shipaton Budapest 2026 with Shippy launching in an orange rocket";
-const eventsCurrent = Astro.url.pathname.startsWith("/2026/events");
-const sitewideNotices = (await getCollection("events2026"))
+const socialImage = new URL(edition.assets.socialImage, Astro.site);
+const socialImageAlt = `${edition.name} ${edition.year} with Shippy launching in an orange rocket`;
+const eventsCurrent = Astro.url.pathname.startsWith(edition.eventsPath);
+const events = await getEvents2026();
+const contact = resolveProfile({ ref: edition.contactProfile }, "edition.contactProfile");
+const footerEvents = edition.footerEventIds.map((id) => {
+  const event = events.find(({ entry }) => entry.id === id);
+  if (!event) throw new Error(`edition.footerEventIds: unknown event reference "${id}"`);
+  return event;
+});
+const sitewideNotices = events
   .filter(({ data }) => data.notice?.sitewide)
-  .sort((a, b) => a.data.date.localeCompare(b.data.date))
   .slice(0, 1)
-  .filter((event) => Astro.url.pathname !== eventPath(event.id));
+  .filter((event) => Astro.url.pathname !== eventPath(event.entry.id));
 ---
 
 <!doctype html>
-<html lang="en" data-edition="2026">
+<html lang="en" data-edition={edition.year}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,7 +39,7 @@ const sitewideNotices = (await getCollection("events2026"))
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="/2026/brand/shippy-pixel-head.png" type="image/png" />
+    <link rel="icon" href={edition.assets.icon} type="image/png" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -50,24 +58,24 @@ const sitewideNotices = (await getCollection("events2026"))
     <script is:inline src="/2026/scripts/page-transitions.js"></script>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/2026/" aria-label="Shipaton Budapest home">
+      <a class="brand" href={edition.homePath} aria-label={`${edition.name} home`}>
         <img
-          src="/2026/brand/shipaton-wordmark.svg"
+          src={edition.assets.wordmark}
           width="535"
           height="128"
-          alt="Shipaton 2026"
+          alt={edition.competitionName}
           decoding="async"
         />
-        <span>Budapest</span>
+        <span>{edition.city}</span>
       </a>
       <nav class="site-header__nav" aria-label="Primary navigation">
-        <a href="/2026/events/" aria-current={eventsCurrent ? "page" : undefined}>Events</a>
-        <a href="https://www.shipaton.com/" rel="noreferrer">Official Shipaton <span aria-hidden="true">↗</span></a>
+        <a href={edition.eventsPath} aria-current={eventsCurrent ? "page" : undefined}>Events</a>
+        <a href={edition.links.official} rel="noreferrer">Official Shipaton <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
     {sitewideNotices.map((event) => (
       <NoticeBanner
-        href={eventPath(event.id)}
+        href={eventPath(event.entry.id)}
         label={event.data.notice!.label}
         linkLabel={`View ${event.data.title} update`}
         message={event.data.notice!.message}
@@ -80,18 +88,18 @@ const sitewideNotices = (await getCollection("events2026"))
     <footer class="site-footer">
       <div class="site-footer__grid">
         <section class="site-footer__brand" aria-labelledby="footer-brand-title">
-          <p class="site-footer__kicker">Shipaton Budapest · 2026</p>
+          <p class="site-footer__kicker">{edition.name} · {edition.year}</p>
           <h2 id="footer-brand-title">A local community.<br />Real momentum.</h2>
           <p>Meet local developers, trade ideas, and move your app one useful step forward.</p>
         </section>
 
         <nav class="site-footer__column" aria-labelledby="footer-explore-title">
           <h2 id="footer-explore-title">Explore</h2>
-          <a href="/2026/">Home</a>
-          <a href="/2026/events/">All events</a>
-          <a href="/2026/events/project-kickoff/">Project Kickoff</a>
+          <a href={edition.homePath}>Home</a>
+          <a href={edition.eventsPath}>All events</a>
+          {footerEvents.map(({ entry, data }) => <a href={eventPath(entry.id)}>{data.title}</a>)}
           <a
-            href="https://github.com/HLCaptain/shipaton-budapest"
+            href={edition.links.repository}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -101,31 +109,31 @@ const sitewideNotices = (await getCollection("events2026"))
 
         <nav class="site-footer__column" aria-labelledby="footer-shipaton-title">
           <h2 id="footer-shipaton-title">Shipaton</h2>
-          <a href="https://www.shipaton.com/" rel="noreferrer">Official site <span aria-hidden="true">↗</span></a>
-          <a href="https://www.shipaton.com/events" rel="noreferrer">IRL events <span aria-hidden="true">↗</span></a>
-          <a href="https://revenuecat-shipaton-2026.devpost.com/" rel="noreferrer">Join on Devpost <span aria-hidden="true">↗</span></a>
-          <a href="https://www.shipaton.com/media-kit" rel="noreferrer">Media kit <span aria-hidden="true">↗</span></a>
+          <a href={edition.links.official} rel="noreferrer">Official site <span aria-hidden="true">↗</span></a>
+          <a href={edition.links.events} rel="noreferrer">IRL events <span aria-hidden="true">↗</span></a>
+          <a href={edition.links.competition} rel="noreferrer">Join on Devpost <span aria-hidden="true">↗</span></a>
+          <a href={edition.links.mediaKit} rel="noreferrer">Media kit <span aria-hidden="true">↗</span></a>
         </nav>
 
         <section class="site-footer__column" aria-labelledby="footer-contact-title">
           <h2 id="footer-contact-title">Contact</h2>
           <div class="site-footer__socials">
-            <a class="social-link" href="https://github.com/HLCaptain" rel="noreferrer" aria-label="GitHub" title="GitHub">
+            {contact.social?.github && <a class="social-link" href={contact.social.github} rel="noreferrer" aria-label="GitHub" title="GitHub">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z" />
               </svg>
-            </a>
-            <a class="social-link" href="https://x.com/hlcaptain" rel="noreferrer" aria-label="X" title="X">
+            </a>}
+            {contact.social?.x && <a class="social-link" href={contact.social.x} rel="noreferrer" aria-label="X" title="X">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M18.2 2.3h3.3l-7.2 8.2 8.5 11.2h-6.7l-5.2-6.8-6 6.8H1.7l7.7-8.8L1.3 2.3h6.8l4.7 6.2 5.4-6.2Zm-1.1 17.5h1.8L7.1 4.1h-2l12 15.7Z" />
               </svg>
-            </a>
+            </a>}
           </div>
         </section>
       </div>
 
       <div class="site-footer__bottom">
-        <p>Community-led in Budapest · Shipaton 2026</p>
+        <p>Community-led in {edition.city} · {edition.competitionName}</p>
       </div>
     </footer>
   </body>

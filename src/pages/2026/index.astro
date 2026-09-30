@@ -1,23 +1,23 @@
 ---
-import { getCollection } from "astro:content";
+import { edition } from "../../editions/2026/config";
+import { getEvents2026 } from "../../editions/2026/content";
+import { resolveProfile } from "../../editions/2026/resolve";
 import ButtonLink from "../../editions/2026/components/ButtonLink.astro";
 import PersonList from "../../editions/2026/components/PersonList.astro";
 import {
   eventPath,
   formatEventDateLabel,
-  formatEventStatus
+  formatEventStatus,
+  selectFeaturedEvent
 } from "../../editions/2026/events";
 import BaseLayout from "../../editions/2026/layouts/BaseLayout.astro";
 
-const events = (await getCollection("events2026")).sort((a, b) => a.data.date.localeCompare(b.data.date));
-const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
-const featuredEvent = events.find(({ data }) => data.status === "scheduled" && data.date >= today)
-  ?? events.find(({ data }) => data.status === "postponed")
-  ?? events.at(-1)!;
-const featuredEventUrl = eventPath(featuredEvent.id);
-const competitionDeadline = "2026-10-01T06:45:00Z";
+const events = await getEvents2026();
+const featured = selectFeaturedEvent(events.map(({ entry, data }) => ({ id: entry.id, ...data })))!;
+const featuredEventUrl = eventPath(featured.id);
+const contact = resolveProfile({ ref: edition.contactProfile }, "edition.contactProfile");
 
-const pageTitle = "Shipaton Budapest 2026";
+const pageTitle = `${edition.name} ${edition.year}`;
 const description =
   "A community-led Budapest meetup where developers share ideas, get practical guidance, and move their apps forward during Shipaton 2026.";
 ---
@@ -26,7 +26,7 @@ const description =
   <main id="main-content">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero__copy">
-        <p class="eyebrow"><span aria-hidden="true"></span> Budapest · Shipaton 2026</p>
+        <p class="eyebrow"><span aria-hidden="true"></span> {edition.city} · {edition.competitionName}</p>
         <h1 id="hero-title">Move your app forward in good company.</h1>
         <p class="hero__lede">
           A welcoming Budapest meetup to share ideas, get practical guidance, and make progress on the app you want to ship.
@@ -36,20 +36,20 @@ const description =
             See the event schedule <span aria-hidden="true">↓</span>
           </ButtonLink>
           <ButtonLink
-            href="https://revenuecat-shipaton-2026.devpost.com/"
+            href={edition.links.competition}
             rel="noreferrer"
-          >Join Shipaton 2026 <span aria-hidden="true">↗</span></ButtonLink>
+          >Join {edition.competitionName} <span aria-hidden="true">↗</span></ButtonLink>
         </div>
       </div>
       <a
         class="hero__art-link"
         href={featuredEventUrl}
-        aria-label={`View ${featuredEvent.data.title} event details`}
+        aria-label={`View ${featured.title} event details`}
         data-featured-event
       >
         <figure class="hero__art">
           <img
-            src="/2026/brand/rocket-launch-wide.svg"
+            src={edition.assets.rocket}
             width="1000"
             height="498"
             alt="Shippy the cat launching in an orange rocket"
@@ -57,8 +57,8 @@ const description =
             fetchpriority="high"
           />
           <figcaption>
-            <span data-featured-title>{featuredEvent.data.title}</span>
-            <strong data-featured-location>{featuredEvent.data.heroVenue ?? featuredEvent.data.venue}</strong>
+            <span data-featured-title>{featured.title}</span>
+            <strong data-featured-location>{featured.venue.heroLabel}</strong>
           </figcaption>
         </figure>
       </a>
@@ -86,8 +86,8 @@ const description =
           </button>
         </div>
 
-        <ol class="event-track" data-event-track aria-label="Shipaton Budapest event lineup">
-          {events.map(({ id, data: event }) => (
+        <ol class="event-track" data-event-track aria-label={`${edition.name} event lineup`}>
+          {events.map(({ entry: { id }, data: event }) => (
             <li
               class="event-card"
               id={id}
@@ -97,8 +97,7 @@ const description =
               data-date={event.date}
               data-status={event.status}
               data-title={event.title}
-              data-venue={event.venue}
-              data-hero-venue={event.heroVenue ?? event.venue}
+              data-hero-venue={event.venue.heroLabel}
             >
               <div class="event-card__topline">
                 <span class="event-card__sequence">Orbit {event.sequence}</span>
@@ -118,14 +117,14 @@ const description =
                 <div>
                   <dt>Where</dt>
                   <dd>
-                    {event.locationUrl
-                      ? <a href={event.locationUrl} rel="noreferrer">{event.venue} <span aria-hidden="true">↗</span></a>
-                      : event.venue}
+                    {event.venue.mapsUrl
+                      ? <a href={event.venue.mapsUrl} rel="noreferrer">{event.venue.label} <span aria-hidden="true">↗</span></a>
+                      : event.venue.label}
                   </dd>
                 </div>
-                {event.hosts && <PersonList kind="hosts" people={event.hosts} />}
-                {event.organizers && <PersonList kind="organizers" people={event.organizers} />}
-                {event.speakers && (
+                {event.hosts.length > 0 && <PersonList kind="hosts" people={event.hosts} />}
+                {event.organizers.length > 0 && <PersonList kind="organizers" people={event.organizers} />}
+                {event.speakers.length > 0 && (
                   <PersonList class="event-card__speakers" kind="speakers" people={event.speakers.slice(0, 3)} />
                 )}
               </dl>
@@ -136,7 +135,7 @@ const description =
             class="event-card"
             data-event-rail-card
             data-event-teaser
-            data-visible-before={competitionDeadline}
+            data-visible-before={edition.competitionDeadline}
             hidden
           >
             <div class="event-card__topline">
@@ -145,9 +144,9 @@ const description =
             </div>
             <span class="event-card__teaser-kicker">Not organized yet</span>
             <h3>What should happen next?</h3>
-            <p class="event-card__format">Potential Shipaton Budapest event</p>
+            <p class="event-card__format">Potential {edition.name} event</p>
             <p class="event-card__description">
-              Share your Shipaton Budapest experience—or tell the organizer what you would like to see at an upcoming event.
+              Share your {edition.name} experience—or tell the organizer what you would like to see at an upcoming event.
             </p>
             <dl>
               <div>
@@ -157,16 +156,16 @@ const description =
               <div>
                 <dt>Contact the organizer</dt>
                 <dd class="event-card__contacts">
-                  <a href="https://x.com/hlcaptain" target="_blank" rel="noopener noreferrer">
+                  {contact.social?.x && <a href={contact.social.x} target="_blank" rel="noopener noreferrer">
                     X <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
-                  </a>
-                  <a
-                    href="https://www.linkedin.com/in/balazs-puspok-kiss"
+                  </a>}
+                  {contact.url && <a
+                    href={contact.url}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    LinkedIn <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
-                  </a>
+                    {contact.urlLabel ?? "Profile"} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+                  </a>}
                 </dd>
               </div>
             </dl>
@@ -204,5 +203,5 @@ const description =
     </section>
   </main>
 
-  <script is:inline src="/2026/scripts/event-rail.js" defer></script>
+  <script src="../../editions/2026/scripts/event-rail.js"></script>
 </BaseLayout>
