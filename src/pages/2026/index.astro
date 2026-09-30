@@ -117,7 +117,11 @@ const description =
                 </div>
                 <div>
                   <dt>Where</dt>
-                  <dd>{event.venue}</dd>
+                  <dd>
+                    {event.locationUrl
+                      ? <a href={event.locationUrl} rel="noreferrer">{event.venue} <span aria-hidden="true">↗</span></a>
+                      : event.venue}
+                  </dd>
                 </div>
                 {event.hosts && <PersonList kind="hosts" people={event.hosts} />}
                 {event.organizers && <PersonList kind="organizers" people={event.organizers} />}
