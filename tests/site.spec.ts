@@ -215,7 +215,14 @@ test("features the wrap-up and publishes its agenda, RSVP and venue previews", a
   const hero = page.getByRole("link", { name: `View ${title} event details` });
   await expect(hero).toHaveAttribute("href", path);
   await expect(hero.locator("[data-featured-title]")).toHaveText(title);
+  await expect(hero.locator("[data-featured-location]")).toHaveText("Genesys Hungary");
   const card = page.locator('[data-event-card][data-date="2026-10-13"]');
+  await expect(card.getByRole("link", { name: "Genesys Hungary", exact: true })).toHaveAttribute(
+    "href", "https://maps.app.goo.gl/txyWYX2hDED4bRi27"
+  );
+  await expect(card.getByRole("link", { name: /Kotlin Budapest/ })).toHaveAttribute(
+    "href", "https://www.meetup.com/kotlin-budapest/"
+  );
   await expect(card).toHaveAttribute("aria-current", "date");
   await expect(card).toHaveAttribute("data-state", "upcoming");
   await expect(page.locator("[data-event-counter]")).toHaveText("2 / 3");
@@ -229,8 +236,7 @@ test("features the wrap-up and publishes its agenda, RSVP and venue previews", a
   const facts = page.locator(".event-document__facts");
   await expect(facts).toContainText("13 October 2026");
   await expect(facts).toContainText("17:30–20:30");
-  await expect(facts).toContainText("Genesys Hungary");
-  await expect(facts.getByRole("link", { name: /Genesys Hungary/ })).toHaveAttribute(
+  await expect(facts.getByRole("link", { name: "Genesys Hungary", exact: true })).toHaveAttribute(
     "href", "https://maps.app.goo.gl/txyWYX2hDED4bRi27"
   );
   await expect(facts.getByRole("link", { name: "Reserve a place" })).toHaveAttribute(
@@ -239,6 +245,12 @@ test("features the wrap-up and publishes its agenda, RSVP and venue previews", a
   await expect(page.getByRole("navigation", { name: "Event resources" }).getByRole("link", { name: "RSVP" }))
     .toHaveAttribute("href", "https://luma.com/a10znagr");
   const body = page.locator(".event-document__body");
+  await expect(body.getByRole("link", { name: "Kotlin Budapest", exact: true })).toHaveAttribute(
+    "href", "https://www.meetup.com/kotlin-budapest/"
+  );
+  await expect(page.locator('.event-people__groups').getByRole("link", { name: /Kotlin Budapest/ })).toHaveAttribute(
+    "href", "https://www.meetup.com/kotlin-budapest/"
+  );
   await expect(body.getByRole("link", { name: "RSVP on Luma" })).toHaveAttribute("href", "https://luma.com/a10znagr");
   await expect(body.getByRole("link", { name: "Meetup", exact: true })).toHaveAttribute(
     "href", "https://www.meetup.com/kotlin-budapest/events/316663708/"
