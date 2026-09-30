@@ -11,7 +11,7 @@
 
     target.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: 400,
-      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      easing: getComputedStyle(document.documentElement).getPropertyValue("--ease").trim(),
       fill: "both"
     });
   }, true);

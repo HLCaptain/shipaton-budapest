@@ -1,14 +1,10 @@
 ---
-type Person = {
-  name: string;
-  role?: string;
-  url?: string;
-};
+import type { ResolvedEventData } from "../resolve";
 
 type Props = {
   class?: string;
   kind: "hosts" | "organizers" | "speakers";
-  people: Person[];
+  people: ResolvedEventData["hosts"];
   showRoles?: boolean;
 };
 

@@ -1,13 +1,8 @@
 ---
-type Presentation = {
-  title: string;
-  speaker: string;
-  url: string;
-  format: string;
-};
+import type { ResolvedEventData } from "../resolve";
 
 type Props = {
-  presentations: Presentation[];
+  presentations: ResolvedEventData["presentations"];
 };
 
 const { presentations } = Astro.props;
@@ -27,7 +22,7 @@ const { presentations } = Astro.props;
           <span>{presentation.format}</span>
         </span>
         <h3>{presentation.title}</h3>
-        <p>Presented by <strong>{presentation.speaker}</strong></p>
+        <p>Presented by <strong>{presentation.speaker.name}</strong></p>
         <span class="event-presentation-card__cta">
           Open presentation <span aria-hidden="true">↗</span>
           <span class="visually-hidden"> (opens in a new tab)</span>

@@ -1,3 +1,6 @@
+import { edition } from "../config";
+import { formatEventStatus, getToday, selectFeaturedEvent } from "../events";
+
 const initEventRail = () => {
   const browser = document.querySelector("[data-event-browser]");
   if (!browser || browser.dataset.eventRailBound) return;
@@ -22,7 +25,7 @@ const initEventRail = () => {
 
   const controller = new AbortController();
   const { signal } = controller;
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" }).format(new Date());
+  const today = getToday();
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let activeIndex = -1;
   let centerTarget = null;
@@ -44,7 +47,7 @@ const initEventRail = () => {
     if (status === "postponed") {
       card.dataset.state = status;
       const stateLabel = card.querySelector("[data-event-state]");
-      if (stateLabel) stateLabel.textContent = "Postponed";
+      if (stateLabel) stateLabel.textContent = formatEventStatus(status);
       return;
     }
     const date = card.dataset.date;
@@ -107,17 +110,10 @@ const initEventRail = () => {
     if (centerTarget === null) restoreSnapping();
   };
 
-  const firstUpcoming = cards.findIndex(
-    (card) => card.dataset.status !== "postponed"
-      && Boolean(card.dataset.date)
-      && card.dataset.date >= today
-  );
-  const firstPostponed = cards.findIndex((card) => card.dataset.status === "postponed");
-  const featuredIndex = firstUpcoming >= 0
-    ? firstUpcoming
-    : firstPostponed >= 0
-      ? firstPostponed
-      : cards.length - 1;
+  const featuredEvent = selectFeaturedEvent(cards
+    .filter((card) => card.hasAttribute("data-event-card"))
+    .map((card) => ({ id: card.id, date: card.dataset.date, status: card.dataset.status })), today);
+  const featuredIndex = Math.max(0, cards.findIndex((card) => card.id === featuredEvent?.id));
   const featuredCard = cards[featuredIndex];
   const featuredLink = document.querySelector("[data-featured-event]");
   selectCard(featuredIndex);
@@ -128,7 +124,7 @@ const initEventRail = () => {
     const title = featuredLink.querySelector("[data-featured-title]");
     const location = featuredLink.querySelector("[data-featured-location]");
     if (title) title.textContent = featuredCard.dataset.title ?? "Upcoming event";
-    if (location) location.textContent = featuredCard.dataset.heroVenue ?? "Budapest";
+    if (location) location.textContent = featuredCard.dataset.heroVenue ?? edition.city;
   }
 
   initialFrame = requestAnimationFrame(() => centerCard(cards[activeIndex], false));

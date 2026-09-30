@@ -137,7 +137,7 @@ const initVenueGallery = (eventDocument) => {
     incoming.setAttribute("aria-hidden", "true");
     viewport.append(incoming);
 
-    const timing = { duration: 320, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", fill: "forwards" };
+    const timing = { duration: 320, easing: getComputedStyle(root).getPropertyValue("--ease").trim(), fill: "forwards" };
     const animations = [
       picture.animate([
         { transform: `translateX(${offset}px)` },
@@ -367,7 +367,7 @@ const initVenueGallery = (eventDocument) => {
       picture.animate([
         { transform: `translateX(${offset}px)` },
         { transform: "translateX(0)" }
-      ], { duration: 160, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+      ], { duration: 160, easing: getComputedStyle(root).getPropertyValue("--ease").trim() });
     }
   };
 

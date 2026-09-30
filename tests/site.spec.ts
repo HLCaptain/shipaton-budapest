@@ -167,6 +167,23 @@ test("removes the potential event at the competition deadline", async ({ page })
   await expect(event).toHaveCSS("cursor", "pointer");
 });
 
+test("features the last real event when all dates are past and the teaser is visible", async ({ page }) => {
+  await page.clock.setFixedTime("2026-09-24T10:00:00+02:00");
+  await page.route("**/2026/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('data-date="2026-10-13"', 'data-date="2026-09-01"')
+    });
+  });
+  await page.goto("/2026/");
+
+  await expect(page.locator("[data-event-teaser]")).toBeVisible();
+  await expect(page.locator("#wrap-up")).toHaveAttribute("aria-current", "date");
+  await expect(page.locator("[data-event-counter]")).toHaveText("2 / 3");
+  await expect(page.locator("[data-featured-event]")).toHaveAttribute("href", "/2026/events/wrap-up/");
+});
+
 test("keeps content inside the viewport and exposes the important links", async ({ page }) => {
   await page.goto("/2026/");
 
@@ -266,7 +283,7 @@ test("features the wrap-up and publishes its agenda, RSVP and venue previews", a
   )).toEqual([
     "https://www.linkedin.com/in/szpetra/",
     "https://www.linkedin.com/in/tamas--fabian/",
-    "https://www.linkedin.com/in/balazs-puspok-kiss/"
+    "https://www.linkedin.com/in/balazs-puspok-kiss"
   ]);
   await expect(page.locator(".event-document__body")).toContainText("Event language: English");
   await expect(page.locator(".event-document__body")).toContainText("Europe/Budapest");
